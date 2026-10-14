@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>강진군 관광 데이터 대시보드</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="head" id="top">
+    <div>
+      <h1 class="title">강진군 관광 데이터 대시보드</h1>
+      <div class="sub">한국관광공사 데이터랩 · 강진군 · 방문·소비·검색 <span class="gen"></span></div>
+    </div>
+    <label class="ctrl" id="ov-ctrl">기준월
+      <select id="month" aria-label="기준월"></select>
+    </label>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="화면 선택">
+    <button class="tab" role="tab" data-tab="overview" aria-selected="true">월간 현황</button>
+    <button class="tab" role="tab" data-tab="compare" aria-selected="false">기간 비교</button>
+  </nav>
+
+  <div class="load-error" id="load-error" hidden>데이터를 불러오지 못했습니다. 잠시 후 새로고침하거나, 저장소의 Actions 탭에서 최근 실행이 성공했는지 확인하세요.</div>
+
+  <!-- ===== 월간 현황 ===== -->
+  <div id="overview" class="pane">
+    <p class="take" id="takeaway"></p>
+
+    <section class="kpis">
+      <div class="kpi"><span class="kpi-l">관광소비 총액</span><span class="kpi-v"><span data-k="spend_eok">—</span><span class="kpi-u">억원</span></span><span class="kpi-d" data-d="spend_mom"></span></div>
+      <div class="kpi"><span class="kpi-l">외지인 방문자 (연인원)</span><span class="kpi-v"><span data-k="outsider">—</span><span class="kpi-u">명</span></span><span class="kpi-d" data-d="outsider_mom"></span></div>
+      <div class="kpi"><span class="kpi-l">외지인 비중</span><span class="kpi-v"><span data-k="outsider_share_pct">—</span><span class="kpi-u">%</span></span><span class="kpi-d" data-d="share_pp"></span></div>
+      <div class="kpi"><span class="kpi-l">전체 방문자 (연인원)</span><span class="kpi-v"><span data-k="total">—</span><span class="kpi-u">명</span></span><span class="kpi-d" data-d="total_mom"></span></div>
+      <div class="kpi"><span class="kpi-l">관광 검색건수</span><span class="kpi-v"><span data-k="search">—</span><span class="kpi-u">건</span></span><span class="kpi-d" data-d="search_mom"></span></div>
+    </section>
+
+    <h2 class="sec" id="visit">방문 <small>누가, 언제, 어디로 왔나</small></h2>
+    <div class="grid">
+      <div class="card wide">
+        <h3>일별 방문자 수</h3>
+        <p class="note">현지인 + 외지인 = 전체 방문자. 막대에 올리면 일자별 수치가 보입니다.</p>
+        <div class="legend"><span><i class="sw c0"></i>외지인</span><span><i class="sw cm"></i>현지인</span></div>
+        <div class="chart" id="ch-visit-daily"></div>
+      </div>
+      <div class="card">
+        <h3>읍면별 방문자 수</h3>
+        <p class="note">월간 방문자 수 (일별 추이와 집계 기준이 다름)</p>
+        <div class="chart" id="ch-visit-area"></div>
+      </div>
+      <div class="card">
+        <h3>방문자 거주지 (시도)</h3>
+        <p class="note">시군구별 거주지 비율을 시도별로 더한 값, %</p>
+        <div class="chart" id="ch-origin-sido"></div>
+      </div>
+      <div class="card">
+        <h3>방문자 거주지 상위 15개 시군구</h3>
+        <p class="note">비율(%) 높은 순</p>
+        <div class="tbl-wrap">
+          <table id="tbl-origin">
+            <thead><tr><th>시도</th><th>시군구</th><th class="num">비율(%)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec" id="spend">소비 <small>어디에 얼마를 썼나</small></h2>
+    <div class="grid">
+      <div class="card wide">
+        <h3>일별 관광소비액</h3>
+        <p class="note">관광총소비, 천원</p>
+        <div class="chart" id="ch-spend-daily"></div>
+      </div>
+      <div class="card">
+        <h3>업종 대분류별 지출 비중</h3>
+        <p class="note">%, 업종별 지출액 파일 기준</p>
+        <div class="chart" id="ch-spend-major"></div>
+      </div>
+      <div class="card">
+        <h3>업종 중분류별 소비액</h3>
+        <p class="note">일별 소비액의 월 합계, 백만원</p>
+        <div class="chart" id="ch-spend-cat"></div>
+      </div>
+    </div>
+
+    <h2 class="sec" id="search">검색 <small>무엇을 찾아봤나</small></h2>
+    <div class="grid">
+      <div class="card wide">
+        <h3>일별 관광 검색건수</h3>
+        <p class="note">전체 카테고리 합계, 건</p>
+        <div class="chart" id="ch-search-daily"></div>
+      </div>
+      <div class="card">
+        <h3>유형별 검색건수</h3>
+        <p class="note">건</p>
+        <div class="chart" id="ch-search-type"></div>
+      </div>
+      <div class="card">
+        <h3>읍면별 검색 유형 구성</h3>
+        <p class="note">각 읍면 검색 중 유형별 비율(%). 진할수록 비중이 큼, 괄호는 읍면 검색건수</p>
+        <div class="chart" id="ch-search-area"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 기간 비교 ===== -->
+  <div id="compare" class="pane" hidden>
+    <div class="cmpbar">
+      <label class="ctrl">기준 <select id="cmp-a" aria-label="기준 월"></select></label>
+      <span class="vs">vs</span>
+      <label class="ctrl">비교 <select id="cmp-b" aria-label="비교 월"></select></label>
+      <span class="pres">
+        <button class="pre" data-pre="prev">전월</button>
+        <button class="pre" data-pre="yoy">전년 동월</button>
+      </span>
+    </div>
+
+    <div class="empty" id="cmp-empty" hidden>
+      <strong>비교할 다른 달의 데이터가 아직 없습니다.</strong>
+      <span>지금은 <span id="only-month"></span> 데이터만 반영되어 있습니다. 저장소의 <code>data/raw</code> 폴더에 다른 달 CSV를 올리면 두 달을 골라 나란히 비교할 수 있습니다.</span>
+    </div>
+
+    <div id="cmp-body">
+      <div class="grid">
+        <div class="card wide">
+          <h3>핵심 지표 비교</h3>
+          <p class="note">월 합계와 일평균. 증감률은 비교 월 대비 기준 월의 변화, 외지인 비중은 %p 차이</p>
+          <div class="tbl-wrap">
+            <table id="tbl-pairs">
+              <thead><tr><th>지표</th><th class="num" id="th-a">기준</th><th class="num" id="th-b">비교</th><th class="num">증감</th><th class="num">증감률</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card wide">
+          <h3>일별 추이 겹쳐보기</h3>
+          <p class="note">같은 날짜(1일~말일)끼리 겹쳐 비교합니다. 요일이 달라질 수 있어 주말 효과에 유의하세요.</p>
+          <div class="seg" role="group" aria-label="지표">
+            <button data-m="outsider" aria-pressed="true">외지인 방문자</button>
+            <button data-m="total" aria-pressed="false">전체 방문자</button>
+            <button data-m="spend_k" aria-pressed="false">관광소비</button>
+            <button data-m="search" aria-pressed="false">검색건수</button>
+          </div>
+          <div class="legend"><span><i class="sw c0"></i><span id="lg-a">기준</span></span><span><i class="sw cm"></i><span id="lg-b">비교</span></span></div>
+          <div class="chart" id="ch-cmp-daily"></div>
+        </div>
+        <div class="card">
+          <h3>업종 중분류별 소비액 비교</h3>
+          <p class="note">백만원</p>
+          <div class="chart" id="ch-cmp-cat"></div>
+        </div>
+        <div class="card">
+          <h3>방문자 거주지 비교 (시도)</h3>
+          <p class="note">%</p>
+          <div class="chart" id="ch-cmp-sido"></div>
+        </div>
+        <div class="card">
+          <h3>검색 유형 비교</h3>
+          <p class="note">건</p>
+          <div class="chart" id="ch-cmp-type"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="foot" id="notes">
+    <div class="checks" id="checks" hidden>
+      <strong>데이터 점검</strong>
+      <ul id="warn-list"></ul>
+    </div>
+    <strong>읽는 법</strong>
+    <ul>
+      <li>방문자 수는 일별 방문자를 더한 연인원입니다. 한 사람이 여러 날 방문하면 여러 번 셉니다.</li>
+      <li>현지인은 강진군 거주자, 외지인은 그 외 지역 거주 방문자입니다(데이터랩 정의).</li>
+      <li>거주지·읍면·업종·유형 분포 파일에는 기준월 열이 없어, 파일명의 연·월을 기준월로 씁니다.</li>
+      <li>출처: 한국관광공사 데이터랩(datalab.visitkorea.or.kr). 원본 CSV는 저장소 <code>data/raw</code> 폴더에 있습니다.</li>
+    </ul>
+    <details>
+      <summary>반영된 파일 목록</summary>
+      <table id="tbl-files"><thead><tr><th>파일</th><th class="num">행</th><th>상태</th></tr></thead><tbody></tbody></table>
+    </details>
+  </footer>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+<script src="vendor/d3.v7.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
