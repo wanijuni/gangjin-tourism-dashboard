@@ -205,7 +205,7 @@
     // 노랑 → 초록 → 청록 → 파랑 → 남색 (적음 → 많음): 단계가 뚜렷하게 보이는 색
     const RAMP = ['#fff4b8', '#c7e9a0', '#6fcf9f', '#25a5b8', '#1f6fb5', '#173f8a'];
     const ramp = d3.interpolateRgbBasis(RAMP);
-    const max = d3.max(rows, (r) => r.value) || 1;
+    const max = o.max || d3.max(rows, (r) => r.value) || 1;
     const t = (v) => Math.sqrt(v / max);
     const color = (v) => ramp(t(v));
     // 군 외곽선(그림자) → 읍면 면 → 읍면 경계선
@@ -235,6 +235,8 @@
       const narrow = W < 520;
       tx.append('tspan').attr('x', cx).attr('dy', narrow ? '0.35em' : '-0.2em').attr('class', 'n').text(f.properties.name);
       if (!narrow) tx.append('tspan').attr('x', cx).attr('dy', '1.25em').attr('class', 'v').text(o.short(r));
+      const sub = o.sub && o.sub(r);
+      if (sub && !narrow) tx.append('tspan').attr('x', cx).attr('dy', '1.2em').attr('class', 'd ' + sub[1]).text(sub[0]);
     });
     // 범례
     const lg = el('div', 'map-legend');
@@ -653,6 +655,33 @@
       .map((k) => ({ label: k, a: ma.get(k) ? scale(ma.get(k)) : (ma.has(k) && A.n ? 0 : null), b: mb.get(k) ? scale(mb.get(k)) : (mb.has(k) && B.n ? 0 : null) }))
       .filter((r) => (r.a || 0) + (r.b || 0) > 0)
       .sort((p, q) => (q.a ?? -1) - (p.a ?? -1));
+    // 읍면별 방문자 수: 월 자료를 기간에 포함된 일수 비율만큼 더함(달 전체면 그대로)
+    const areaOf = (p) => {
+      const acc = new Map(); let partial = false, missing = false;
+      const ms = [...new Set(d3.range(spanDays(p.start, p.end)).map((i) => addDays(p.start, i).slice(0, 6)))];
+      for (const m of ms) {
+        const y = +m.slice(0, 4), mo = +m.slice(4), ml = lastDay(y, mo);
+        const s0 = p.start > `${m}01` ? p.start : `${m}01`, e0 = p.end < `${m}${ml}` ? p.end : `${m}${ml}`;
+        const frac = spanDays(s0, e0) / ml; if (frac < 1) partial = true;
+        const rows = of('visitors_by_area', m); if (!rows.length) { missing = true; continue; }
+        for (const r of rows) acc.set(r.area, (acc.get(r.area) || 0) + r.visitors * frac);
+      }
+      return { map: new Map([...acc].map(([k, v]) => [k, Math.round(v)])), partial, missing };
+    };
+    const ar = areaOf(PA), br = areaOf(PBx);
+    const amax = Math.max(1, ...ar.map.values(), ...br.map.values());
+    const short = (r) => (r.value >= 10000 ? (Math.round(r.value / 1000) / 10) + '만' : fmt(r.value)) + '명';
+    const chg = (a, b) => (b ? Math.round((a / b - 1) * 1000) / 10 : null);
+    const mk = (mine, other, isA) => [...mine.map].map(([k, v]) => ({ label: k, value: v, other: other.map.get(k) }));
+    $('#cmp-map-a-t').textContent = `기준 · ${la}`; $('#cmp-map-b-t').textContent = `비교 · ${lb}`;
+    choropleth($('#ch-cmp-map-a'), mk(ar, br), { max: amax, short,
+      sub: (r) => { const c = chg(r.value, r.other); return c == null ? null : [tri(c) + Math.abs(c) + '%', c > 0 ? 'up' : c < 0 ? 'down' : '']; },
+      lines: (r) => { const c = chg(r.value, r.other); return [[C0, la, fmt(r.value) + '명'], [CM, lb, r.other == null ? '없음' : fmt(r.other) + '명'], [null, '증감률', c == null ? '—' : tri(c) + Math.abs(c) + '%']]; } });
+    choropleth($('#ch-cmp-map-b'), mk(br, ar), { max: amax, short,
+      lines: (r) => [[CM, lb, fmt(r.value) + '명'], [C0, la, r.other == null ? '없음' : fmt(r.other) + '명']] });
+    $('#cmp-map-note').textContent = '두 지도는 같은 색 기준입니다. 기준 지도의 ▲▼는 비교 기간 대비 증감률입니다.'
+      + (ar.partial || br.partial ? ' 달의 일부만 포함된 기간은 월 자료를 일수 비율로 나눈 추정치입니다.' : '')
+      + (ar.missing || br.missing ? ' 일부 달은 읍면 자료가 없어 빠졌습니다.' : '');
     hbars2($('#ch-cmp-cat'), pairMaps(sumCols(D.daily_cat, PA), sumCols(D.daily_cat, PBx), (v) => Math.round(v / 1000)), { la, lb, fmt: (v) => fmt(v) });
     hbars2($('#ch-cmp-sido'), pairMaps(sidoWeighted(A), sidoWeighted(B), (v) => v), { la, lb, fmt: (v) => v + '%' });
     hbars2($('#ch-cmp-type'), pairMaps(sumCols(D.daily_type, PA), sumCols(D.daily_type, PBx), (v) => v), { la, lb, fmt: (v) => fmt(v) });
