@@ -113,6 +113,10 @@ td.num, th.num { text-align: right; }
 .foot summary { cursor: pointer; }
 #tbl-files { margin-top: 8px; font-size: 12px; }
 
-.notice { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--c0); border-radius: 8px; padding: 10px 14px; margin: -6px 0 20px; font-size: 13.5px; }
-.notice strong { font-weight: 600; white-space: nowrap; }
-.notice p { margin: 0; color: var(--fg); }
+:root { --notice-bg: #fff6dc; --notice-line: #e8c25a; --notice-fg: #6b4e00; --notice-badge: #b8860b; }
+@media (prefers-color-scheme: dark) { :root { --notice-bg: #33290f; --notice-line: #8a6d1f; --notice-fg: #f1d48a; --notice-badge: #d9a72c; } }
+.notice { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; background: var(--notice-bg); border: 1px solid var(--notice-line); border-radius: 10px; padding: 12px 16px; margin: 0 0 28px; font-size: 14px; color: var(--notice-fg); }
+.notice-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--notice-badge); color: #fff; font-weight: 700; font-size: 12.5px; padding: 3px 10px 3px 4px; border-radius: 999px; white-space: nowrap; }
+.notice-ic { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #fff; color: var(--notice-badge); font-size: 12px; font-weight: 800; line-height: 1; }
+.notice p { margin: 0; font-weight: 500; }
+.take { padding-top: 4px; }
