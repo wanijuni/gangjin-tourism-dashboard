@@ -491,11 +491,7 @@
     if (fest) {
       const f = FEST.find((x) => x.id === state.fest);
       const sel = $('#fest'); sel.replaceChildren();
-      for (const host of ['군', '읍면']) {
-        const g = document.createElement('optgroup'); g.label = host === '군' ? '군 주관' : '읍면 주관';
-        festList().filter((x) => x.host === host).forEach((x) => g.append(new Option(x.name, x.id)));
-        if (g.children.length) sel.append(g);
-      }
+      festList().forEach((x) => sel.append(new Option(x.name, x.id)));
       sel.value = state.fest;
       const optLab = (y) => { const e = f.editions.find((x) => String(x.year) === y); return `${y}년${e.nth ? ` 제${e.nth}회` : ''} (${+e.s.slice(4, 6)}/${+e.s.slice(6)}~${+e.e.slice(4, 6)}/${+e.e.slice(6)})`; };
       const ys = festYears(f);
