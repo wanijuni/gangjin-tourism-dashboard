@@ -1,6 +1,7 @@
 """data/raw 의 데이터랩 CSV를 읽어 docs/data/data.json 하나로 합칩니다.
 
-파일명 규칙: "YYYY년 M월_<자료명>.csv"  (예: "2026년 9월_방문자 수 추이.csv")
+파일명 규칙: "YYYYMM_<자료명>.csv"  (예: "202609_방문자 수 추이.csv")
+            "YYYY년 M월_<자료명>.csv" 형식(예: "2026년 9월_방문자 수 추이.csv")도 읽습니다.
 - 자료명은 데이터랩에서 내려받은 이름 그대로 두면 됩니다.
 - 일별 파일(…추이)은 안에 든 날짜가 파일명의 연·월과 맞는지 확인합니다.
   맞지 않으면 그 달의 파일 전체를 건너뛰고 대시보드 하단 '데이터 점검'에 표시합니다.
@@ -35,7 +36,8 @@ KINDS = {
 }
 DAILY = {"visitors_daily", "spend_daily", "search_daily"}
 UNUSED = {"spend_by_area"}  # 대시보드에서 쓰지 않는 자료(요청으로 제외)
-NAME_RE = re.compile(r"^(\d{4})\s*년\s*(\d{1,2})\s*월[\s_]*(.+?)\.csv$", re.I)
+# 두 가지 이름을 모두 받습니다: "2026년 9월_자료명.csv" 또는 "202609_자료명.csv"
+NAME_RE = re.compile(r"^(?:(\d{4})\s*년\s*(\d{1,2})\s*월|(\d{4})(\d{2}))[\s_]*(.+?)\.csv$", re.I)
 
 
 def nfc(s):
@@ -71,13 +73,16 @@ def main():
         m = NAME_RE.match(name)
         kind = None
         if m:
-            label = re.sub(r"[_\s]+", " ", m.group(3)).strip()
+            label = re.sub(r"[_\s]+", " ", m.group(5)).strip()
             kind = KINDS.get(label)
+            year, mon = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+            if not 1 <= int(mon) <= 12:
+                kind = None
         if not m or not kind:
-            warnings.append(f"{name}: 파일명을 알아볼 수 없어 건너뜀 (예: '2026년 9월_방문자 수 추이.csv')")
+            warnings.append(f"{name}: 파일명을 알아볼 수 없어 건너뜀 (예: '202609_방문자 수 추이.csv')")
             files.append({"name": name, "status": "건너뜀"})
             continue
-        month = f"{m.group(1)}{int(m.group(2)):02d}"
+        month = f"{year}{int(mon):02d}"
         rows = read_rows(path)
         if month in found[kind]:
             warnings.append(f"{name}: 같은 달·같은 자료 파일이 이미 있어 이 파일로 덮어씀 ({found[kind][month][0]})")
