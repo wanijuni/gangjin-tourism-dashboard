@@ -8,7 +8,7 @@
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
   let D = null;
-  const state = { tab: 'overview', month: null, unit: 'month', a: null, b: null, ca: null, cb: null, bAuto: null, align: true, metric: 'outsider' };
+  const state = { tab: 'overview', month: null, unit: 'month', a: null, b: null, ca: null, cb: null, fest: null, bAuto: null, align: true, metric: 'outsider' };
 
   // ---------- helpers ----------
   const mLabel = (m) => `${m.slice(0, 4)}년 ${+m.slice(4)}월`;
@@ -276,7 +276,18 @@
   const lastDay = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
   const pad = (n) => String(n).padStart(2, '0');
   const UNIT_LEN = { month: 1, quarter: 3, half: 6, year: 12 };
-  const UNIT_WORD = { month: '전월', quarter: '전분기', half: '전반기', year: '전년', custom: '직전 같은 기간' };
+  const UNIT_WORD = { month: '전월', quarter: '전분기', half: '전반기', year: '전년', custom: '직전 같은 기간', festival: '직전 회차' };
+
+  // ---------- 축제 ----------
+  const FEST = window.FESTIVALS || [];
+  const edHasData = (e) => D && D.daily.length && e.s <= D.daily[D.daily.length - 1].date && e.e >= D.daily[0].date;
+  const festList = () => FEST.filter((f) => f.editions.filter(edHasData).length >= 2);
+  const festYears = (f) => f.editions.filter(edHasData).map((e) => String(e.year));
+  const priorEdition = (f, y) => festYears(f).filter((x) => x < y).pop();
+  function festPeriod(f, y) {
+    const e = f.editions.find((x) => String(x.year) === y);
+    return { key: y, start: e.s, end: e.e, label: `${y}년${e.nth ? `(제${e.nth}회)` : ''}`, place: e.place };
+  }
 
   function keyOf(unit, y, m) {
     if (unit === 'month') return `${y}${pad(m)}`;
@@ -377,7 +388,9 @@
       const rowsY = [[keyA, H - m.b + 12, '기준', C0], [keyB, H - m.b + 29, '비교', 'var(--muted)']];
       // 기준 기간 쉬는 날은 배경도 옅게 칠함
       svg.append('g').selectAll('rect').data(d3.range(1, n + 1).filter((i) => dayInfo(keyA(i)))).join('rect')
-        .attr('x', (i) => x(i) - (x(2) - x(1)) / 2).attr('width', x(2) - x(1)).attr('y', m.t).attr('height', H - m.b - m.t)
+        .attr('x', (i) => Math.max(m.l, x(i) - (x(2) - x(1)) / 2))
+        .attr('width', (i) => Math.min(W - m.r, x(i) + (x(2) - x(1)) / 2) - Math.max(m.l, x(i) - (x(2) - x(1)) / 2))
+        .attr('y', m.t).attr('height', H - m.b - m.t)
         .style('fill', 'var(--rest-bg)');
       for (const [kf, yy, lab, col] of rowsY) {
         svg.append('text').attr('x', m.l - 14).attr('y', yy + 2.5).attr('dy', '0.32em').attr('text-anchor', 'end')
@@ -433,6 +446,18 @@
 
   function resolvePeriods() {
     const u = state.unit;
+    if (u === 'festival') {
+      const list = festList();
+      if (!list.find((f) => f.id === state.fest)) state.fest = list.length ? list[0].id : null;
+      const f = FEST.find((x) => x.id === state.fest);
+      if (!f) return [null, null];
+      const ys = festYears(f);
+      if (!ys.includes(state.a)) state.a = ys[ys.length - 1];
+      const others = ys.filter((y) => y !== state.a);
+      if (state.bAuto && priorEdition(f, state.a)) state.b = priorEdition(f, state.a);
+      if (!others.includes(state.b)) state.b = priorEdition(f, state.a) || others[others.length - 1];
+      return [festPeriod(f, state.a), festPeriod(f, state.b)];
+    }
     if (u === 'custom') {
       if (!state.ca) state.ca = { s: addDays(dataMax(), -29), e: dataMax() };
       if (!state.cb || state.bAuto) state.cb = clampR(shiftRange(state.ca, state.bAuto || 'yoy'));
@@ -459,9 +484,27 @@
     }
     $('#cmp-empty').hidden = true; $('#cmp-body').hidden = false;
     const [PA, PB] = resolvePeriods();
-    const custom = u === 'custom';
+    if (!PA) { $('#cmp-body').hidden = true; return; }
+    const custom = u === 'custom', fest = u === 'festival';
     $('#cmp-a').hidden = custom; $('#cmp-b').hidden = custom; $('#rng-a').hidden = !custom; $('#rng-b').hidden = !custom;
-    if (custom) {
+    $('#fest-row').hidden = !fest;
+    if (fest) {
+      const f = FEST.find((x) => x.id === state.fest);
+      const sel = $('#fest'); sel.replaceChildren();
+      for (const host of ['군', '읍면']) {
+        const g = document.createElement('optgroup'); g.label = host === '군' ? '군 주관' : '읍면 주관';
+        festList().filter((x) => x.host === host).forEach((x) => g.append(new Option(x.name, x.id)));
+        if (g.children.length) sel.append(g);
+      }
+      sel.value = state.fest;
+      const optLab = (y) => { const e = f.editions.find((x) => String(x.year) === y); return `${y}년${e.nth ? ` 제${e.nth}회` : ''} (${+e.s.slice(4, 6)}/${+e.s.slice(6)}~${+e.e.slice(4, 6)}/${+e.e.slice(6)})`; };
+      const ys = festYears(f);
+      $('#cmp-a').replaceChildren(...ys.slice().reverse().map((y) => new Option(optLab(y), y))); $('#cmp-a').value = state.a;
+      $('#cmp-b').replaceChildren(...ys.filter((y) => y !== state.a).reverse().map((y) => new Option(optLab(y), y))); $('#cmp-b').value = state.b;
+      $('.pre[data-pre=prev]').disabled = !priorEdition(f, state.a);
+      const noData = f.editions.filter((e) => !edHasData(e)).map((e) => `${e.year}년`);
+      $('#fest-info').textContent = `장소: ${PA.place}` + (noData.length ? ` · 자료 기간 밖: ${noData.join(', ')}` : '');
+    } else if (custom) {
       for (const [id, v] of [['#a-s', state.ca.s], ['#a-e', state.ca.e], ['#b-s', state.cb.s], ['#b-e', state.cb.e]]) {
         const inp = $(id); inp.min = iso(dataMin()); inp.max = iso(dataMax());
         if (inp !== document.activeElement) inp.value = iso(v);
@@ -475,7 +518,7 @@
       $('.pre[data-pre=yoy]').disabled = !keys.includes(shiftKey(u, state.a, 'yoy'));
     }
     $('.pre[data-pre=prev]').textContent = UNIT_WORD[u] + ' 대비';
-    $('.pre[data-pre=yoy]').hidden = u === 'year';
+    $('.pre[data-pre=yoy]').hidden = u === 'year' || fest;
 
     const A = agg(PA);
     // 기준 기간 자료가 도중에 끝나면(예: 올해는 9월까지) 비교 기간도 같은 길이까지만 합산
@@ -572,12 +615,14 @@
   $('#month').addEventListener('change', (e) => { state.month = e.target.value; render(); });
   $('#cmp-a').addEventListener('change', (e) => { state.a = e.target.value; state.b = null; render(); });
   $('#cmp-b').addEventListener('change', (e) => { state.b = e.target.value; state.bAuto = null; render(); });
+  $('#fest').addEventListener('change', (e) => { state.fest = e.target.value; state.a = null; state.b = null; render(); });
   $$('.seg.unit button').forEach((b) => b.addEventListener('click', () => {
     if (state.unit === b.dataset.u) return;
     state.unit = b.dataset.u; state.a = null; state.b = null; render();
   }));
   $$('.pre').forEach((b) => b.addEventListener('click', () => {
     state.bAuto = b.dataset.pre;
+    if (state.unit === 'festival') { const f = FEST.find((x) => x.id === state.fest); state.b = f && priorEdition(f, state.a); render(); return; }
     if (state.unit === 'custom') state.cb = clampR(shiftRange(state.ca, b.dataset.pre));
     else state.b = shiftKey(state.unit, state.a, b.dataset.pre);
     render();

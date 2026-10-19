@@ -130,7 +130,13 @@
           <button data-u="half" aria-pressed="false">반기</button>
           <button data-u="year" aria-pressed="false">연</button>
           <button data-u="custom" aria-pressed="false">특정기간</button>
+          <button data-u="festival" aria-pressed="false">축제</button>
         </div>
+      </div>
+      <div class="pick-row fest-row" id="fest-row" hidden>
+        <span class="ctl-l">축제</span>
+        <select id="fest" aria-label="축제"></select>
+        <span class="fest-info" id="fest-info"></span>
       </div>
       <div class="pick-row">
         <div class="pick">
@@ -226,6 +232,7 @@
 <div class="tip" id="tip" hidden></div>
 <script src="vendor/d3.v7.min.js"></script>
 <script src="holidays.js"></script>
+<script src="festivals.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
