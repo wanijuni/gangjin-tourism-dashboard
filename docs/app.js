@@ -669,17 +669,15 @@
       return { map: new Map([...acc].map(([k, v]) => [k, Math.round(v)])), partial, missing };
     };
     const ar = areaOf(PA), br = areaOf(PBx);
-    const amax = Math.max(1, ...ar.map.values(), ...br.map.values());
+    const amax = Math.max(1, ...ar.map.values());
     const short = (r) => (r.value >= 10000 ? (Math.round(r.value / 1000) / 10) + '만' : fmt(r.value)) + '명';
     const chg = (a, b) => (b ? Math.round((a / b - 1) * 1000) / 10 : null);
     const mk = (mine, other, isA) => [...mine.map].map(([k, v]) => ({ label: k, value: v, other: other.map.get(k) }));
-    $('#cmp-map-a-t').textContent = `기준 · ${la}`; $('#cmp-map-b-t').textContent = `비교 · ${lb}`;
+    $('#cmp-map-a-t').textContent = `기준 · ${la} (▲▼: ${lb} 대비)`;
     choropleth($('#ch-cmp-map-a'), mk(ar, br), { max: amax, short,
       sub: (r) => { const c = chg(r.value, r.other); return c == null ? null : [tri(c) + Math.abs(c) + '%', c > 0 ? 'up' : c < 0 ? 'down' : '']; },
       lines: (r) => { const c = chg(r.value, r.other); return [[C0, la, fmt(r.value) + '명'], [CM, lb, r.other == null ? '없음' : fmt(r.other) + '명'], [null, '증감률', c == null ? '—' : tri(c) + Math.abs(c) + '%']]; } });
-    choropleth($('#ch-cmp-map-b'), mk(br, ar), { max: amax, short,
-      lines: (r) => [[CM, lb, fmt(r.value) + '명'], [C0, la, r.other == null ? '없음' : fmt(r.other) + '명']] });
-    $('#cmp-map-note').textContent = '두 지도는 같은 색 기준입니다. 기준 지도의 ▲▼는 비교 기간 대비 증감률입니다.'
+    $('#cmp-map-note').textContent = '색은 기준 기간의 방문자 수, ▲▼는 비교 기간 대비 증감률입니다. 읍면에 올리면 두 기간 수치가 보입니다.'
       + (ar.partial || br.partial ? ' 달의 일부만 포함된 기간은 월 자료를 일수 비율로 나눈 추정치입니다.' : '')
       + (ar.missing || br.missing ? ' 일부 달은 읍면 자료가 없어 빠졌습니다.' : '');
     hbars2($('#ch-cmp-cat'), pairMaps(sumCols(D.daily_cat, PA), sumCols(D.daily_cat, PBx), (v) => Math.round(v / 1000)), { la, lb, fmt: (v) => fmt(v) });

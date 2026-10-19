@@ -175,3 +175,4 @@ td.num, th.num { text-align: right; }
 .chart text.map-lab .d { font-size: 11.5px; font-weight: 700; }
 .chart text.map-lab .d.up { fill: var(--up); } .chart text.map-lab .d.down { fill: var(--down); }
 .chart text.map-lab.on-dark .d.up { fill: #ffb3b8; } .chart text.map-lab.on-dark .d.down { fill: #b9d4ff; }
+.map-single { max-width: 720px; margin: 0 auto; }
