@@ -237,7 +237,7 @@
     if (row && pk) {
       const T = (s) => document.createTextNode(s), B = (s) => el('b', null, s);
       tk.append(T(`${+M.slice(4)}월 외지인 방문은 일별 합계 `), B(fmt(row.outsider)), T('명으로 전체 방문의 '), B(row.outsider_share_pct + '%'),
-        T('였습니다. 가장 붐빈 날은 '), B(pk.day_label), T('로 외지인 '), B(fmt(pk.outsider)), T('명이 찾았고, 한 달 관광소비는 '),
+        T('였습니다.'), el('br'), T('가장 붐빈 날은 '), B(pk.day_label), T('로 외지인 '), B(fmt(pk.outsider)), T('명이 찾았고, 한 달 관광소비는 '),
         B(row.spend_eok + '억원'), T('입니다.'));
     }
 
