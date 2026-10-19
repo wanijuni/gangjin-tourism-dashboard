@@ -145,3 +145,7 @@ td.num, th.num { text-align: right; }
 .daylegend .dl-h { color: var(--fg); font-weight: 600; }
 .dl-sw { display: inline-block; width: 12px; height: 5px; border-radius: 1.5px; margin-right: 5px; vertical-align: 2px; }
 @media (max-width: 640px) { .daylegend { justify-content: flex-start; } }
+.notice { align-items: flex-start; }
+.notice-body { display: flex; flex-direction: column; gap: 2px; flex: 1 1 20rem; }
+.notice-body p { margin: 0; line-height: 1.6; }
+.notice-body b { font-weight: 700; }
