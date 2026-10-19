@@ -204,8 +204,12 @@
         <div class="card wide">
           <h3>읍면별 방문자 수 지도</h3>
           <p class="note" id="cmp-map-note"></p>
-          <div class="map-single">
-            <div class="map-cap" id="cmp-map-a-t">기준</div><div class="chart map" id="ch-cmp-map-a"></div>
+          <div class="map-split">
+            <div><div class="map-cap" id="cmp-map-a-t">기준</div><div class="chart map" id="ch-cmp-map-a"></div></div>
+            <div class="map-side">
+              <div class="map-cap">읍면 순위 (방문자 수, 명)</div>
+              <table id="tbl-cmp-area"><thead><tr><th>#</th><th>읍면</th><th class="num" id="tca-a">기준</th><th class="num" id="tca-b">비교</th><th class="num">증감률</th></tr></thead><tbody></tbody></table>
+            </div>
           </div>
         </div>
         <div class="card">

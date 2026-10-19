@@ -198,14 +198,11 @@
     if (!rows.length) return noData(box);
     const val = new Map(rows.map((r) => [r.label, r]));
     const W = Math.max(280, box.clientWidth), narrow = W < 520;
-    const H = narrow ? Math.round(Math.max(320, W * 0.95)) : Math.round(Math.min(600, Math.max(460, W * 0.62)));
+    const H = narrow ? Math.round(Math.max(320, W * 0.95)) : Math.round(Math.min(640, Math.max(480, W * 0.9)));
     box.style.minHeight = H + 40 + 'px';
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
-    // 강진군은 남북으로 길어서, 넓은 화면에서는 가로로 늘려 카드 폭을 채움(최대 1.9배)
-    const base = d3.geoMercator().fitExtent([[10, 10], [W - 10, H - 10]], GEO);
-    const [[bx0], [bx1]] = d3.geoPath(base).bounds(GEO);
-    const sx = narrow ? 1 : Math.min(1.9, (W - 24) / Math.max(1, bx1 - bx0)), mid = (bx0 + bx1) / 2;
-    const proj = d3.geoTransform({ point(x, y) { const p = base([x, y]); this.stream.point(W / 2 + (p[0] - mid) * sx, p[1]); } });
+    // 실제 모양 그대로(가로세로 비율 유지)
+    const proj = d3.geoMercator().fitExtent([[10, 10], [W - 10, H - 10]], GEO);
     const path = d3.geoPath(proj);
     // 노랑 → 초록 → 청록 → 파랑 → 남색 (적음 → 많음): 단계가 뚜렷하게 보이는 색
     const RAMP = ['#fff4b8', '#c7e9a0', '#6fcf9f', '#25a5b8', '#1f6fb5', '#173f8a'];
@@ -239,9 +236,9 @@
       const gl = lab.append('g');
       const tx = gl.append('text').attr('class', 'map-lab').attr('x', cx).attr('y', cy).attr('text-anchor', 'middle');
       tx.append('tspan').attr('x', cx).attr('dy', narrow ? '0.35em' : '-0.2em').attr('class', 'n').text(f.properties.name);
-      if (!narrow) tx.append('tspan').attr('x', cx).attr('dy', '1.25em').attr('class', 'v').text(o.short(r));
+      if (!narrow && !o.noValue) tx.append('tspan').attr('x', cx).attr('dy', '1.25em').attr('class', 'v').text(o.short(r));
       const sub = o.sub && o.sub(r);
-      if (sub && !narrow) tx.append('tspan').attr('x', cx).attr('dy', '1.2em').attr('class', 'd ' + sub[1]).text(sub[0]);
+      if (sub && !narrow) tx.append('tspan').attr('x', cx).attr('dy', o.noValue ? '1.25em' : '1.2em').attr('class', 'd ' + sub[1]).text(sub[0]);
       // 라벨 뒤에 흰 상자를 깔아 경계선·면 색과 겹쳐도 읽히게 함
       const bb = tx.node().getBBox();
       gl.insert('rect', 'text').attr('class', 'map-pill').attr('x', bb.x - 7).attr('y', bb.y - 4)
@@ -691,9 +688,17 @@
     const chg = (a, b) => (b ? Math.round((a / b - 1) * 1000) / 10 : null);
     const mk = (mine, other, isA) => [...mine.map].map(([k, v]) => ({ label: k, value: v, other: other.map.get(k) }));
     $('#cmp-map-a-t').textContent = `기준 · ${la} (▲▼: ${lb} 대비)`;
-    choropleth($('#ch-cmp-map-a'), mk(ar, br), { max: amax, short,
+    choropleth($('#ch-cmp-map-a'), mk(ar, br), { max: amax, short, noValue: true,
       sub: (r) => { const c = chg(r.value, r.other); return c == null ? null : [tri(c) + Math.abs(c) + '%', c > 0 ? 'up' : c < 0 ? 'down' : '']; },
       lines: (r) => { const c = chg(r.value, r.other); return [[C0, la, fmt(r.value) + '명'], [CM, lb, r.other == null ? '없음' : fmt(r.other) + '명'], [null, '증감률', c == null ? '—' : tri(c) + Math.abs(c) + '%']]; } });
+    const tbA = $('#tbl-cmp-area tbody'); tbA.replaceChildren();
+    $('#tca-a').textContent = la; $('#tca-b').textContent = lb;
+    mk(ar, br).sort((p, q) => q.value - p.value).forEach((r, i) => {
+      const c = chg(r.value, r.other), tr = el('tr');
+      tr.append(el('td', 'rk', String(i + 1)), el('td', 'metric', r.label), el('td', 'num', fmt(r.value)), el('td', 'num muted', r.other == null ? '—' : fmt(r.other)),
+        el('td', c == null ? 'num' : c > 0 ? 'num up' : c < 0 ? 'num down' : 'num', c == null ? '—' : tri(c) + Math.abs(c) + '%'));
+      tbA.append(tr);
+    });
     $('#cmp-map-note').textContent = '색은 기준 기간의 방문자 수, ▲▼는 비교 기간 대비 증감률입니다. 읍면에 올리면 두 기간 수치가 보입니다.'
       + (ar.partial || br.partial ? ' 달의 일부만 포함된 기간은 월 자료를 일수 비율로 나눈 추정치입니다.' : '')
       + (ar.missing || br.missing ? ' 일부 달은 읍면 자료가 없어 빠졌습니다.' : '');
