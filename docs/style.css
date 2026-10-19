@@ -138,3 +138,10 @@ td.num, th.num { text-align: right; }
 .linkbtn { font: inherit; font-size: 12.5px; background: none; border: 0; padding: 0; color: var(--c0); text-decoration: underline; cursor: pointer; }
 #tbl-pairs { min-width: 560px; }
 #tbl-pairs th, #tbl-pairs td:first-child { white-space: nowrap; }
+
+:root { --day-sat: #3f72d9; --day-sun: #d64541; --day-hol: #e8901a; --day-nat: #8a4fd1; --day-pub: #1f9e8e; --day-sub: #d9488f; --rest-bg: rgba(214, 69, 65, .06); }
+@media (prefers-color-scheme: dark) { :root { --day-sat: #7aa2f0; --day-sun: #f07a72; --day-hol: #f2ac4b; --day-nat: #b48af0; --day-pub: #4fc4b3; --day-sub: #f07ab4; --rest-bg: rgba(240, 122, 114, .08); } }
+.daylegend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; font-size: 12px; color: var(--muted); margin: 0 0 4px; min-height: 18px; }
+.daylegend .dl-h { color: var(--fg); font-weight: 600; }
+.dl-sw { display: inline-block; width: 12px; height: 5px; border-radius: 1.5px; margin-right: 5px; vertical-align: 2px; }
+@media (max-width: 640px) { .daylegend { justify-content: flex-start; } }

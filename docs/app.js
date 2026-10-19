@@ -47,18 +47,54 @@
   }
   function noData(box, msg) { box.replaceChildren(el('div', 'nodata', msg || '이 달의 자료가 없습니다')); }
 
+  // ---------- 휴일 ----------
+  const HOL = window.HOLIDAYS || {};
+  const DAY_TYPES = [
+    ['토', '토요일', 'var(--day-sat)'], ['일', '일요일', 'var(--day-sun)'], ['명절', '명절', 'var(--day-hol)'],
+    ['국경일', '국경일', 'var(--day-nat)'], ['공휴일', '공휴일', 'var(--day-pub)'], ['대체', '대체공휴일', 'var(--day-sub)'],
+  ];
+  const DAY_COLOR = Object.fromEntries(DAY_TYPES.map(([k, , c]) => [k, c]));
+  function dayInfo(key) {
+    const dow = new Date(Date.UTC(+key.slice(0, 4), +key.slice(4, 6) - 1, +key.slice(6, 8))).getUTCDay();
+    const h = HOL[key];
+    if (h) return { type: h[0], name: h[1], sat: dow === 6 };
+    if (dow === 6) return { type: '토', name: null, sat: true };
+    if (dow === 0) return { type: '일', name: null, sat: false };
+    return null;
+  }
+  function dayLegend(box, keys) {
+    const present = new Set(keys.map(dayInfo).filter(Boolean).map((i) => i.type));
+    const lg = el('div', 'daylegend');
+    lg.append(el('span', 'dl-h', '휴일'));
+    for (const [k, name, c] of DAY_TYPES) {
+      if (!present.has(k)) continue;
+      const it = el('span'); const sw = el('i', 'dl-sw'); sw.style.background = c; it.append(sw, document.createTextNode(name)); lg.append(it);
+    }
+    box.append(lg);
+  }
+
   // ---------- charts ----------
   function dailyBars(box, days, series, unit) {
     box.replaceChildren();
     if (!days.length) return noData(box);
+    dayLegend(box, days.map((d) => d.key));
     const W = Math.max(300, box.clientWidth), H = 240;
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     const totals = days.map((d) => d3.sum(d.vals));
     const y0 = d3.scaleLinear([0, d3.max(totals) || 1], [0, 1]).nice();
     const ticks = y0.ticks(4);
-    const m = { t: 22, r: 6, b: 22, l: textW(svg, ticks.map((v) => compact.format(v))) + 10 };
+    const m = { t: 22, r: 6, b: 30, l: textW(svg, ticks.map((v) => compact.format(v))) + 10 };
     const x = d3.scaleBand(days.map((d) => d.key), [m.l, W - m.r]).paddingInner(0.25).paddingOuter(0.1);
     const y = d3.scaleLinear(y0.domain(), [H - m.b, m.t]);
+    const info = new Map(days.map((d) => [d.key, dayInfo(d.key)]));
+    // 쉬는 날 배경과 축 아래 색 띠
+    const rest = days.filter((d) => info.get(d.key));
+    svg.append('g').selectAll('rect').data(rest).join('rect')
+      .attr('x', (d) => x(d.key) - (x.step() - x.bandwidth()) / 2).attr('width', x.step())
+      .attr('y', m.t - 4).attr('height', H - m.b - m.t + 4).style('fill', 'var(--rest-bg)');
+    svg.append('g').selectAll('rect').data(rest).join('rect')
+      .attr('x', (d) => x(d.key)).attr('width', x.bandwidth()).attr('y', H - m.b + 3).attr('height', 5).attr('rx', 1.5)
+      .style('fill', (d) => DAY_COLOR[info.get(d.key).type]);
     svg.append('g').selectAll('line').data(ticks).join('line')
       .attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y)
       .style('stroke', (v) => (v === 0 ? 'var(--axis)' : 'var(--grid)'));
@@ -66,7 +102,8 @@
       .attr('x', m.l - 8).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => compact.format(v));
     const step = Math.max(1, Math.ceil(days.length / Math.max(1, Math.floor((W - m.l) / 46))));
     svg.append('g').selectAll('text').data(days.filter((d, i) => i % step === 0)).join('text')
-      .attr('x', (d) => x(d.key) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').text((d) => d.label);
+      .attr('x', (d) => x(d.key) + x.bandwidth() / 2).attr('y', H - 4).attr('text-anchor', 'middle').text((d) => d.label)
+      .style('fill', (d) => { const i = info.get(d.key); return !i ? null : i.type === '토' ? 'var(--day-sat)' : 'var(--day-sun)'; });
     const rx = Math.min(3, x.bandwidth() / 2);
     const g = svg.append('g');
     days.forEach((d) => {
@@ -95,7 +132,8 @@
         const lines = series.length > 1
           ? [...series.map((s, i) => [s.color, s.name, fmt(d.vals[i]) + unit]).reverse(), [null, '합계', fmt(d3.sum(d.vals)) + unit]]
           : [[null, series[0].name, fmt(d.vals[0]) + unit]];
-        tip.show(ev, d.full, lines);
+        const i = info.get(d.key);
+        tip.show(ev, d.full + (i && i.name ? ` · ${i.name}` : ''), lines);
       })
       .on('mouseleave', () => { g.selectAll('rect.bar').attr('opacity', 1); tip.hide(); });
   }
@@ -311,7 +349,8 @@
     return new Map([...acc].map(([k, v]) => [k, W ? Math.round((v / W) * 10) / 10 : null]));
   }
   function trendSeries(p, a, monthly) {
-    if (!monthly) return a.days.map((d) => ({ i: spanDays(p.start, d.date), v: d[state.metric], label: dot(d.date) }));
+    const wd = (k) => { const i = dayInfo(k); const w = '일월화수목금토'[toDate(k).getUTCDay()]; return ` (${w}${i && i.name ? ' · ' + i.name : ''})`; };
+    if (!monthly) return a.days.map((d) => ({ i: spanDays(p.start, d.date), v: d[state.metric], label: dot(d.date) + wd(d.date) }));
     const g = d3.groups(a.days, (d) => d.month);
     return g.map(([m, ds], idx) => ({ i: idx + 1, v: d3.sum(ds, (d) => d[state.metric]), label: `${m.slice(0, 4)}.${m.slice(4)}` + (ds.length < lastDay(+m.slice(0, 4), +m.slice(4)) ? ` (${ds.length}일)` : '') }));
   }
