@@ -89,6 +89,15 @@ select, button { font: inherit; }
 .tip { position: fixed; pointer-events: none; z-index: 10; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 6px 10px; font-size: 12.5px; white-space: nowrap; }
 .tip-h { color: var(--muted); margin-bottom: 2px; }
 .tip b { font-weight: 600; margin-left: 6px; }
+.tip-d { white-space: normal; max-width: 260px; margin-top: 4px; color: var(--muted); line-height: 1.45; }
+.explain { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--fg) 4%, transparent); border: 1px solid var(--line); font-size: 13px; line-height: 1.5; }
+.explain:empty { display: none; }
+.explain .ex-h { font-weight: 700; margin-bottom: 6px; }
+.explain ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.explain li b { font-weight: 700; }
+.explain .ex-v { margin-left: 6px; font-weight: 600; color: var(--c1, inherit); }
+.explain .ex-d { display: block; color: var(--muted); }
+.explain .ex-src { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
 
 .tbl-wrap { max-height: 360px; overflow: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }

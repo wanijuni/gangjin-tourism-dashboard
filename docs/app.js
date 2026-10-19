@@ -28,6 +28,7 @@
       for (const [c, name, val] of lines) {
         const row = el('div');
         if (c) { const s = el('i', 'sw'); s.style.background = c; row.append(s); }
+        if (val === '') { row.className = 'tip-d'; row.textContent = name; tipEl.append(row); continue; }
         row.append(document.createTextNode(name), el('b', null, val));
         tipEl.append(row);
       }
@@ -149,6 +150,52 @@
       .on('mouseleave', () => { g.selectAll('rect.bar').attr('opacity', 1); tip.hide(); });
   }
 
+  // 업종 분류 설명 (한국관광 데이터랩 '지역별 관광지출액' 데이터 설명, 신한카드 카드소분류 기준)
+  const IND = {
+    '쇼핑업': '면세점·대형쇼핑몰·레저용품·기타관광쇼핑(기념품, 농축수산물, 슈퍼·편의점 등) 결제',
+    '식음료업': '음식점(한식·중식·일식·양식·분식·주점)과 카페·베이커리 결제. 현지인 결제는 제외',
+    '운송업': '육상운송(주유·충전, 철도·버스·택시, 주차·유료도로), 여객선, 항공, 렌터카 결제',
+    '여가서비스업': '골프장, 관광유원시설(놀이동산·동물원), 레저(낚시·수상스포츠 등), 문화서비스(박물관·공연 등) 결제',
+    '숙박업': '호텔·콘도·캠핑장·펜션·민박·모텔 등 숙박 결제',
+    '의료웰니스업': '의료관광(병원·한의원·약국)과 뷰티(온천·미용·마사지·피부관리 등) 결제',
+    '여행업': '여행사 결제',
+    '기타관광쇼핑': '기념품·공예품, 농축수산물, 슈퍼마켓·편의점, 주류전문점, 꽃·서점 등 (현지인 결제는 기념품·사진기만 포함)',
+    '일반외식업': '한식·중식·일식·서양식·분식·패스트푸드·주점 (외지인 결제만 집계)',
+    '제과음료업': '베이커리·카페·간식 (외지인 결제만 집계)',
+    '육상운송': '주유소·충전소, 철도·고속버스·택시·버스, 주차장·유료도로, 대리운전 (택시~대리운전은 외지인만)',
+    '수상운송': '여객선',
+    '항공운송': '항공사',
+    '렌터카': '렌터카·모빌리티 대여',
+    '면세점': '면세점',
+    '대형쇼핑몰': '백화점·대형마트·아울렛·휴게소 (대형마트·아울렛·휴게소는 외지인만)',
+    '레저용품쇼핑': '스포츠의류·용품, 골프·낚시용품, 자전거, 등산/아웃도어, 골프웨어',
+    '골프장': '골프장·실내골프장·스크린골프장 (실내·스크린은 외지인만)',
+    '관광유원시설': '놀이동산·동물원',
+    '기타레저': '낚시터·수상스포츠·케이블카·수련장·승마장·수영장·볼링장·노래방·스포츠센터 등',
+    '문화서비스': '영화관·박물관·전시관·공연·수족관·사진관·운동경기 관람 등',
+    '뷰티': '온천·미용실·네일·마사지·피부관리·화장품 등',
+    '호텔': '특급·1급·2급 호텔',
+    '콘도': '콘도미니엄',
+    '캠핑장/펜션': '캠프·펜션·별장·민박·여관',
+    '기타숙박': '모텔·연수원·숙박예약',
+  };
+  // 상위 3개 항목 설명 목록
+  function explainTop(box, rows, fmtV) {
+    if (!box) return;
+    box.replaceChildren();
+    const tot = d3.sum(rows, (r) => r.value);
+    const top = rows.filter((r) => r.value > 0).slice(0, 3);
+    if (!top.length) return;
+    box.append(el('div', 'ex-h', '상위 3개 업종은 무엇을 뜻하나요?'));
+    const ol = el('ol');
+    top.forEach((r) => {
+      const li = el('li');
+      li.append(el('b', null, r.label), el('span', 'ex-v', fmtV(r, tot)), el('span', 'ex-d', IND[r.label] || '데이터랩 분류 기준'));
+      ol.append(li);
+    });
+    box.append(ol, el('div', 'ex-src', '출처: 한국관광 데이터랩 데이터 설명(신한카드 신용카드 결제 기준). 현금·간편결제·지역상품권은 포함되지 않습니다.'));
+  }
+
   function hbars(box, rows, o) {
     box.replaceChildren();
     if (!rows.length) return noData(box);
@@ -164,7 +211,7 @@
       .attr('width', (d) => Math.max(d.value > 0 ? 2 : 0, x(d.value))).style('fill', (d, i) => (o.color ? o.color(d, i) : C0));
     gs.append('text').attr('x', (d) => left + x(d.value) + 6).attr('y', rowH / 2).attr('dy', '0.32em').text((d) => o.fmt(d.value));
     gs.append('rect').attr('width', W).attr('height', rowH).style('fill', 'transparent')
-      .on('mousemove', (ev, d) => { gs.selectAll('rect.bar').attr('opacity', (e) => (e === d ? 1 : 0.5)); tip.show(ev, d.label, [[null, o.name, o.fmt(d.value)]]); })
+      .on('mousemove', (ev, d) => { gs.selectAll('rect.bar').attr('opacity', (e) => (e === d ? 1 : 0.5)); tip.show(ev, d.label, [[null, o.name, o.fmt(d.value)]].concat(o.defs && IND[d.label] ? [[null, IND[d.label], '']] : [])); })
       .on('mouseleave', () => { gs.selectAll('rect.bar').attr('opacity', 1); tip.hide(); });
   }
 
@@ -352,8 +399,12 @@
       tbO.append(tr);
     });
     hbars($('#ch-origin-sido'), of('origin_sido', M).map((r) => ({ label: r.sido, value: r.pct })).sort(desc), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
-    hbars($('#ch-spend-major'), of('industry_major', M).map((r) => ({ label: r.major, value: r.pct })).sort(desc), { name: '지출 비중', fmt: (v) => v + '%', color: () => C1 });
-    hbars($('#ch-spend-cat'), of('spend_cat', M).map((r) => ({ label: r.cat, value: r.mw })).sort(desc), { name: '소비액', fmt: (v) => fmt(v) + '백만원', color: () => C1 });
+    const majRows = of('industry_major', M).map((r) => ({ label: r.major, value: r.pct })).sort(desc);
+    hbars($('#ch-spend-major'), majRows, { name: '지출 비중', fmt: (v) => v + '%', color: () => C1, defs: true });
+    explainTop($('#ex-spend-major'), majRows, (r) => r.value + '%');
+    const catRows = of('spend_cat', M).map((r) => ({ label: r.cat, value: r.mw })).sort(desc);
+    hbars($('#ch-spend-cat'), catRows, { name: '소비액', fmt: (v) => fmt(v) + '백만원', color: () => C1, defs: true });
+    explainTop($('#ex-spend-cat'), catRows, (r, tot) => fmt(r.value) + '백만원 · ' + (tot ? Math.round((r.value / tot) * 1000) / 10 : 0) + '%');
     const types = of('search_type', M).sort((a, b) => b.n - a.n);
     hbars($('#ch-search-type'), types.map((r) => ({ label: r.type, value: r.n })), { name: '검색건수', fmt: (v) => fmt(v) + '건', color: () => C2 });
     heat($('#ch-search-area'), of('search_area', M), types.map((r) => r.type));
