@@ -190,6 +190,55 @@
       .on('mouseleave', () => tip.hide());
   }
 
+  // 읍면 지도 (색 = 방문자 수, sqrt 눈금으로 작은 면도 구분되게)
+  let GEO = null;
+  function choropleth(box, rows, o) {
+    box.replaceChildren();
+    if (!GEO) return noData(box, '지도 파일을 불러오지 못했습니다');
+    if (!rows.length) return noData(box);
+    const val = new Map(rows.map((r) => [r.label, r]));
+    const W = Math.max(280, box.clientWidth), H = Math.round(Math.min(560, Math.max(320, W * 0.95)));
+    box.style.minHeight = H + 40 + 'px';
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const proj = d3.geoMercator().fitExtent([[10, 10], [W - 10, H - 10]], GEO);
+    const path = d3.geoPath(proj);
+    const css = getComputedStyle(document.documentElement);
+    const lo = css.getPropertyValue('--map-lo').trim(), hi = css.getPropertyValue('--map-hi').trim();
+    const max = d3.max(rows, (r) => r.value) || 1;
+    const t = (v) => Math.sqrt(v / max);
+    const color = (v) => d3.interpolateRgb(lo, hi)(0.08 + 0.92 * t(v));
+    const g = svg.append('g');
+    const shapes = g.selectAll('path').data(GEO.features).join('path').attr('d', path)
+      .style('fill', (f) => (val.has(f.properties.name) ? color(val.get(f.properties.name).value) : 'var(--grid)'))
+      .style('stroke', 'var(--panel)').attr('stroke-width', 1.5).attr('stroke-linejoin', 'round')
+      .on('mousemove', function (ev, f) {
+        shapes.attr('opacity', (x) => (x === f ? 1 : 0.55)); d3.select(this).raise().style('stroke', 'var(--fg)');
+        const r = val.get(f.properties.name);
+        tip.show(ev, f.properties.name, r ? o.lines(r) : [[null, '자료', '없음']]);
+      })
+      .on('mouseleave', function () { shapes.attr('opacity', 1).style('stroke', 'var(--panel)'); tip.hide(); });
+    // 라벨: 각 읍면에서 가장 큰 조각의 중심
+    const anchor = (f) => {
+      const polys = f.geometry.coordinates.map((c) => ({ type: 'Polygon', coordinates: c }));
+      const big = polys.reduce((a, b) => (path.area(b) > path.area(a) ? b : a));
+      return path.centroid(big);
+    };
+    const lab = svg.append('g').attr('pointer-events', 'none');
+    GEO.features.forEach((f) => {
+      const r = val.get(f.properties.name); if (!r) return;
+      const [cx, cy] = anchor(f), dark = t(r.value) > 0.8;
+      const tx = lab.append('text').attr('class', 'map-lab' + (dark ? ' on-dark' : '')).attr('x', cx).attr('y', cy).attr('text-anchor', 'middle');
+      const narrow = W < 520;
+      tx.append('tspan').attr('x', cx).attr('dy', narrow ? '0.35em' : '-0.2em').attr('class', 'n').text(f.properties.name);
+      if (!narrow) tx.append('tspan').attr('x', cx).attr('dy', '1.25em').attr('class', 'v').text(o.short(r));
+    });
+    // 범례
+    const lg = el('div', 'map-legend');
+    const bar = el('span', 'map-ramp'); bar.style.background = `linear-gradient(90deg, ${color(0)}, ${color(max * 0.25)}, ${color(max)})`;
+    lg.append(el('span', null, '적음'), bar, el('span', null, '많음'), el('span', 'map-max', `최대 ${o.short({ value: max })}`));
+    box.append(lg);
+  }
+
   function heat(box, rows, typeOrder) {
     box.replaceChildren();
     if (!rows.length) return noData(box);
@@ -263,6 +312,12 @@
       [{ name: '검색건수', color: C2 }], '건');
 
     const desc = (a, b) => b.value - a.value;
+    const areaRows = of('visitors_by_area', M);
+    const totalArea = d3.sum(areaRows, (r) => r.visitors);
+    choropleth($('#ch-visit-map'), areaRows.map((r) => ({ label: r.area, value: r.visitors, pct: r.pct })), {
+      short: (r) => (r.value >= 10000 ? (Math.round(r.value / 1000) / 10) + '만' : fmt(r.value)) + '명',
+      lines: (r) => [[null, '방문자 수', fmt(r.value) + '명'], [null, '비율', (r.pct ?? Math.round(r.value / totalArea * 1000) / 10) + '%']],
+    });
     hbars($('#ch-visit-area'), of('visitors_by_area', M).map((r) => ({ label: r.area, value: r.visitors })).sort(desc), { name: '방문자 수', fmt: (v) => fmt(v) + '명' });
     hbars($('#ch-origin-sido'), of('origin_sido', M).map((r) => ({ label: r.sido, value: r.pct })).sort(desc), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
     hbars($('#ch-spend-major'), of('industry_major', M).map((r) => ({ label: r.major, value: r.pct })).sort(desc), { name: '지출 비중', fmt: (v) => v + '%', color: () => C1 });
@@ -659,6 +714,7 @@
   }));
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
 
+  fetch('gangjin_emd.geojson').then((r) => (r.ok ? r.json() : null)).then((g) => { GEO = g; if (D) render(); }).catch(() => {});
   fetch('data/data.json', { cache: 'no-cache' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((data) => {

@@ -36,3 +36,8 @@
 기간 비교의 **축제** 단위는 `docs/festivals.js` 목록을 씁니다(2023~2026년, 강진군 축제일정 문서 기준).
 새해 일정이 나오면 해당 축제의 `editions` 에 그해 회차·시작일·종료일을 한 줄 추가하세요.
 
+## 읍면 지도
+
+읍면별 방문자 수 지도는 `docs/gangjin_emd.geojson`(강진군 11개 읍면 경계)을 씁니다.
+출처: [vuski/admdongkor](https://github.com/vuski/admdongkor) 행정동 경계 ver20261001(행정안전부 행정동 경계 기반).
+
