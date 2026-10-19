@@ -162,20 +162,21 @@ td.num, th.num { text-align: right; }
 @media (prefers-color-scheme: dark) { :root { --map-edge: rgba(255, 255, 255, .25); } }
 @media (min-width: 1100px) { .map-card { grid-column: span 2; } }
 .chart.map { min-height: 360px; }
-.chart text.map-lab { paint-order: stroke; stroke: rgba(255,255,255,.85); stroke-width: 3px; stroke-linejoin: round; fill: #1a1d21; }
-.chart text.map-lab.on-dark { stroke: rgba(10,25,60,.55); fill: #fff; }
+.chart text.map-lab { fill: #1a1d21; }
+.map-pill { fill: rgba(255,255,255,.93); stroke: rgba(15,30,60,.18); stroke-width: 1; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.18)); }
 
-.chart text.map-lab .n { font-size: 12.5px; font-weight: 700; }
-.chart text.map-lab .v { font-size: 11.5px; }
+
+.chart text.map-lab .n { font-size: 13.5px; font-weight: 800; }
+.chart text.map-lab .v { font-size: 12.5px; font-weight: 500; }
 .map-legend { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 6px; }
 .map-ramp { display: inline-block; width: 160px; height: 12px; border-radius: 5px; border: 1px solid var(--line); }
 .map-max { margin-left: auto; }
 .map-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
 .map-cap { font-size: 13.5px; font-weight: 600; margin-bottom: 4px; }
-.chart text.map-lab .d { font-size: 11.5px; font-weight: 700; }
-.chart text.map-lab .d.up { fill: var(--up); } .chart text.map-lab .d.down { fill: var(--down); }
-.chart text.map-lab.on-dark .d.up { fill: #ffb3b8; } .chart text.map-lab.on-dark .d.down { fill: #b9d4ff; }
-.map-single { max-width: 720px; margin: 0 auto; }
+.chart text.map-lab .d { font-size: 12.5px; font-weight: 800; }
+.chart text.map-lab .d.up { fill: #e8000b; } .chart text.map-lab .d.down { fill: #0050e6; }
+
+.map-single { max-width: none; }
 
 /* Pretendard: 제목·숫자는 굵고 또렷하게 */
 body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }

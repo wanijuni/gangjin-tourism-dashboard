@@ -197,10 +197,15 @@
     if (!GEO) return noData(box, '지도 파일을 불러오지 못했습니다');
     if (!rows.length) return noData(box);
     const val = new Map(rows.map((r) => [r.label, r]));
-    const W = Math.max(280, box.clientWidth), H = Math.round(Math.min(560, Math.max(320, W * 0.95)));
+    const W = Math.max(280, box.clientWidth), narrow = W < 520;
+    const H = narrow ? Math.round(Math.max(320, W * 0.95)) : Math.round(Math.min(600, Math.max(460, W * 0.62)));
     box.style.minHeight = H + 40 + 'px';
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
-    const proj = d3.geoMercator().fitExtent([[10, 10], [W - 10, H - 10]], GEO);
+    // 강진군은 남북으로 길어서, 넓은 화면에서는 가로로 늘려 카드 폭을 채움(최대 1.9배)
+    const base = d3.geoMercator().fitExtent([[10, 10], [W - 10, H - 10]], GEO);
+    const [[bx0], [bx1]] = d3.geoPath(base).bounds(GEO);
+    const sx = narrow ? 1 : Math.min(1.9, (W - 24) / Math.max(1, bx1 - bx0)), mid = (bx0 + bx1) / 2;
+    const proj = d3.geoTransform({ point(x, y) { const p = base([x, y]); this.stream.point(W / 2 + (p[0] - mid) * sx, p[1]); } });
     const path = d3.geoPath(proj);
     // 노랑 → 초록 → 청록 → 파랑 → 남색 (적음 → 많음): 단계가 뚜렷하게 보이는 색
     const RAMP = ['#fff4b8', '#c7e9a0', '#6fcf9f', '#25a5b8', '#1f6fb5', '#173f8a'];
@@ -230,13 +235,17 @@
     const lab = svg.append('g').attr('pointer-events', 'none');
     GEO.features.forEach((f) => {
       const r = val.get(f.properties.name); if (!r) return;
-      const [cx, cy] = anchor(f), dark = t(r.value) > 0.62;
-      const tx = lab.append('text').attr('class', 'map-lab' + (dark ? ' on-dark' : '')).attr('x', cx).attr('y', cy).attr('text-anchor', 'middle');
-      const narrow = W < 520;
+      const [cx, cy] = anchor(f);
+      const gl = lab.append('g');
+      const tx = gl.append('text').attr('class', 'map-lab').attr('x', cx).attr('y', cy).attr('text-anchor', 'middle');
       tx.append('tspan').attr('x', cx).attr('dy', narrow ? '0.35em' : '-0.2em').attr('class', 'n').text(f.properties.name);
       if (!narrow) tx.append('tspan').attr('x', cx).attr('dy', '1.25em').attr('class', 'v').text(o.short(r));
       const sub = o.sub && o.sub(r);
       if (sub && !narrow) tx.append('tspan').attr('x', cx).attr('dy', '1.2em').attr('class', 'd ' + sub[1]).text(sub[0]);
+      // 라벨 뒤에 흰 상자를 깔아 경계선·면 색과 겹쳐도 읽히게 함
+      const bb = tx.node().getBBox();
+      gl.insert('rect', 'text').attr('class', 'map-pill').attr('x', bb.x - 7).attr('y', bb.y - 4)
+        .attr('width', bb.width + 14).attr('height', bb.height + 8).attr('rx', 7);
     });
     // 범례
     const lg = el('div', 'map-legend');
