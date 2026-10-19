@@ -629,7 +629,9 @@
       const pct = unit !== '%' && av != null && bv ? Math.round((av / bv - 1) * 1000) / 10 : null;
       const sign = tri;
       const tr = el('tr');
-      tr.append(el('td', null, label), el('td', 'num', nf(av, unit)), el('td', 'num', nf(bv, unit)));
+      const cat = k.startsWith('spend') ? 'spend' : k.startsWith('search') ? 'search' : 'visit';
+      const name = el('td', 'metric'); const dot = el('i', 'mdot ' + cat); name.append(dot, document.createTextNode(label));
+      tr.append(name, el('td', 'num', nf(av, unit)), el('td', 'num', nf(bv, unit)));
       const cls = diff > 0 ? 'num up' : diff < 0 ? 'num down' : 'num';
       tr.append(el('td', cls, diff == null ? '—' : sign(diff) + (unit === '%' ? Math.abs(diff) + '%p' : nf(Math.abs(diff), unit))));
       tr.append(el('td', pct == null ? 'num' : pct > 0 ? 'num up' : pct < 0 ? 'num down' : 'num', pct == null ? '—' : sign(pct) + Math.abs(pct) + '%'));
