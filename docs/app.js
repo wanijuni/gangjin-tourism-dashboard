@@ -519,7 +519,7 @@
       tr.append(el('td', null, label), el('td', 'num', nf(av, unit)), el('td', 'num', nf(bv, unit)));
       const cls = diff > 0 ? 'num up' : diff < 0 ? 'num down' : 'num';
       tr.append(el('td', cls, diff == null ? '—' : sign(diff) + (unit === '%' ? diff + '%p' : nf(diff, unit))));
-      tr.append(el('td', cls, pct == null ? '—' : sign(pct) + pct + '%'));
+      tr.append(el('td', pct == null ? 'num' : pct > 0 ? 'num up' : pct < 0 ? 'num down' : 'num', pct == null ? '—' : sign(pct) + pct + '%'));
       tb.append(tr);
     }
 
