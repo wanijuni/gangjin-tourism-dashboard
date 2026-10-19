@@ -347,6 +347,13 @@
     $$('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     render();
   }));
+  $$('.more-btn').forEach((b) => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') !== 'true';
+    b.setAttribute('aria-expanded', String(open));
+    b.firstChild.textContent = open ? '접기 ' : '자세히 보기 ';
+    document.getElementById(b.dataset.more).hidden = !open;
+    if (open) render();
+  }));
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
 
   fetch('data/data.json', { cache: 'no-cache' })

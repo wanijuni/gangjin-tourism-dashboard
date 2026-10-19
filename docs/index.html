@@ -37,7 +37,7 @@
       <div class="kpi"><span class="kpi-l">관광 검색건수</span><span class="kpi-v"><span data-k="search">—</span><span class="kpi-u">건</span></span><span class="kpi-d" data-d="search_mom"></span></div>
     </section>
 
-    <h2 class="sec" id="visit">방문 <small>누가, 언제, 어디로 왔나</small></h2>
+    <h2 class="sec" id="visit">방문 <small>누가, 언제, 어디로 왔나</small><button class="more-btn" data-more="more-visit" aria-expanded="false" aria-controls="more-visit">자세히 보기 <span class="chev">▾</span></button></h2>
     <div class="grid">
       <div class="card wide">
         <h3>일별 방문자 수</h3>
@@ -45,6 +45,8 @@
         <div class="legend"><span><i class="sw c0"></i>외지인</span><span><i class="sw cm"></i>현지인</span></div>
         <div class="chart" id="ch-visit-daily"></div>
       </div>
+    </div>
+    <div class="grid more" id="more-visit" hidden>
       <div class="card">
         <h3>읍면별 방문자 수</h3>
         <p class="note">월간 방문자 수 (일별 추이와 집계 기준이 다름)</p>
@@ -67,13 +69,15 @@
       </div>
     </div>
 
-    <h2 class="sec" id="spend">소비 <small>어디에 얼마를 썼나</small></h2>
+    <h2 class="sec" id="spend">소비 <small>어디에 얼마를 썼나</small><button class="more-btn" data-more="more-spend" aria-expanded="false" aria-controls="more-spend">자세히 보기 <span class="chev">▾</span></button></h2>
     <div class="grid">
       <div class="card wide">
         <h3>일별 관광소비액</h3>
         <p class="note">관광총소비, 천원</p>
         <div class="chart" id="ch-spend-daily"></div>
       </div>
+    </div>
+    <div class="grid more" id="more-spend" hidden>
       <div class="card">
         <h3>업종 대분류별 지출 비중</h3>
         <p class="note">%, 업종별 지출액 파일 기준</p>
@@ -86,13 +90,15 @@
       </div>
     </div>
 
-    <h2 class="sec" id="search">검색 <small>무엇을 찾아봤나</small></h2>
+    <h2 class="sec" id="search">검색 <small>무엇을 찾아봤나</small><button class="more-btn" data-more="more-search" aria-expanded="false" aria-controls="more-search">자세히 보기 <span class="chev">▾</span></button></h2>
     <div class="grid">
       <div class="card wide">
         <h3>일별 관광 검색건수</h3>
         <p class="note">전체 카테고리 합계, 건</p>
         <div class="chart" id="ch-search-daily"></div>
       </div>
+    </div>
+    <div class="grid more" id="more-search" hidden>
       <div class="card">
         <h3>유형별 검색건수</h3>
         <p class="note">건</p>
