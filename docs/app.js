@@ -202,21 +202,25 @@
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     const proj = d3.geoMercator().fitExtent([[10, 10], [W - 10, H - 10]], GEO);
     const path = d3.geoPath(proj);
-    const css = getComputedStyle(document.documentElement);
-    const lo = css.getPropertyValue('--map-lo').trim(), hi = css.getPropertyValue('--map-hi').trim();
+    // 노랑 → 초록 → 청록 → 파랑 → 남색 (적음 → 많음): 단계가 뚜렷하게 보이는 색
+    const RAMP = ['#fff4b8', '#c7e9a0', '#6fcf9f', '#25a5b8', '#1f6fb5', '#173f8a'];
+    const ramp = d3.interpolateRgbBasis(RAMP);
     const max = d3.max(rows, (r) => r.value) || 1;
     const t = (v) => Math.sqrt(v / max);
-    const color = (v) => d3.interpolateRgb(lo, hi)(0.08 + 0.92 * t(v));
+    const color = (v) => ramp(t(v));
+    // 군 외곽선(그림자) → 읍면 면 → 읍면 경계선
+    svg.append('g').selectAll('path').data(GEO.features).join('path').attr('d', path)
+      .style('fill', 'none').style('stroke', 'var(--map-edge)').attr('stroke-width', 5).attr('stroke-linejoin', 'round');
     const g = svg.append('g');
     const shapes = g.selectAll('path').data(GEO.features).join('path').attr('d', path)
       .style('fill', (f) => (val.has(f.properties.name) ? color(val.get(f.properties.name).value) : 'var(--grid)'))
-      .style('stroke', 'var(--panel)').attr('stroke-width', 1.5).attr('stroke-linejoin', 'round')
+      .style('stroke', '#ffffff').attr('stroke-width', 1.6).attr('stroke-linejoin', 'round')
       .on('mousemove', function (ev, f) {
-        shapes.attr('opacity', (x) => (x === f ? 1 : 0.55)); d3.select(this).raise().style('stroke', 'var(--fg)');
+        shapes.attr('opacity', (x) => (x === f ? 1 : 0.6)); d3.select(this).raise().style('stroke', '#111').attr('stroke-width', 2.5);
         const r = val.get(f.properties.name);
         tip.show(ev, f.properties.name, r ? o.lines(r) : [[null, '자료', '없음']]);
       })
-      .on('mouseleave', function () { shapes.attr('opacity', 1).style('stroke', 'var(--panel)'); tip.hide(); });
+      .on('mouseleave', function () { shapes.attr('opacity', 1).style('stroke', '#ffffff').attr('stroke-width', 1.6); tip.hide(); });
     // 라벨: 각 읍면에서 가장 큰 조각의 중심
     const anchor = (f) => {
       const polys = f.geometry.coordinates.map((c) => ({ type: 'Polygon', coordinates: c }));
@@ -226,7 +230,7 @@
     const lab = svg.append('g').attr('pointer-events', 'none');
     GEO.features.forEach((f) => {
       const r = val.get(f.properties.name); if (!r) return;
-      const [cx, cy] = anchor(f), dark = t(r.value) > 0.8;
+      const [cx, cy] = anchor(f), dark = t(r.value) > 0.62;
       const tx = lab.append('text').attr('class', 'map-lab' + (dark ? ' on-dark' : '')).attr('x', cx).attr('y', cy).attr('text-anchor', 'middle');
       const narrow = W < 520;
       tx.append('tspan').attr('x', cx).attr('dy', narrow ? '0.35em' : '-0.2em').attr('class', 'n').text(f.properties.name);
@@ -234,7 +238,7 @@
     });
     // 범례
     const lg = el('div', 'map-legend');
-    const bar = el('span', 'map-ramp'); bar.style.background = `linear-gradient(90deg, ${color(0)}, ${color(max * 0.25)}, ${color(max)})`;
+    const bar = el('span', 'map-ramp'); bar.style.background = `linear-gradient(90deg, ${RAMP.join(', ')})`;
     lg.append(el('span', null, '적음'), bar, el('span', null, '많음'), el('span', 'map-max', `최대 ${o.short({ value: max })}`));
     box.append(lg);
   }
