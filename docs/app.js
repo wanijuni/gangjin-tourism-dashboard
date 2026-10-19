@@ -436,10 +436,10 @@
 
   // ---------- compare: render ----------
   const METRICS = [
-    ['spend_eok', '관광소비 총액', '억원'], ['spend_avg_k', '관광소비 일평균', '천원'],
-    ['outsider', '외지인 방문자', '명'], ['outsider_avg', '외지인 일평균', '명'],
+    ['spend_eok', '관광소비 총액', '억원'],
+    ['outsider', '외지인 방문자', '명'],
     ['local', '현지인 방문자', '명'], ['total', '전체 방문자', '명'],
-    ['outsider_share_pct', '외지인 비중', '%'], ['search', '관광 검색건수', '건'], ['search_avg', '검색 일평균', '건'],
+    ['outsider_share_pct', '외지인 비중', '%'], ['search', '관광 검색건수', '건'],
   ];
   const dataMin = () => D.daily[0].date, dataMax = () => D.daily[D.daily.length - 1].date;
   const clampR = (r) => ({ s: r.s < dataMin() ? dataMin() : r.s, e: r.e > dataMax() ? dataMax() : r.e });
@@ -537,7 +537,7 @@
       return s;
     };
     cov.append(part(PA, A, '기준'), el('span', 'sep', '|'), part(PBx, B, '비교'));
-    if (A.n && B.n && Math.abs(A.n - B.n) / Math.max(A.n, B.n) > 0.05) cov.append(el('span', 'warn', '기간 길이가 달라 일평균 비교를 권장합니다'));
+    if (A.n && B.n && Math.abs(A.n - B.n) / Math.max(A.n, B.n) > 0.05) cov.append(el('span', 'warn', '두 기간의 길이가 달라 합계 비교에 유의하세요'));
     if (cutNote && cutNote.possible) {
       const line = el('span', 'cut');
       line.append(document.createTextNode(cutNote.on
