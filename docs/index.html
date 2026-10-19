@@ -35,7 +35,11 @@
 
   <!-- ===== 월간 현황 ===== -->
   <div id="overview" class="pane">
-    <p class="take" id="takeaway"></p>
+    <section class="ai-sum" id="ai-sum" aria-label="월간 요약">
+      <div class="ai-head"><span class="ai-badge">AI 요약</span><span class="ai-month" id="ai-month"></span></div>
+      <ol class="ai-lines" id="takeaway"></ol>
+      <div class="ai-note" id="ai-note"></div>
+    </section>
 
     <section class="kpis">
       <div class="kpi"><span class="kpi-l">관광소비 총액</span><span class="kpi-v"><span data-k="spend_eok">—</span><span class="kpi-u">억원</span></span><span class="kpi-d" data-d="spend_mom"></span></div>
@@ -247,6 +251,7 @@
 <script src="vendor/d3.v7.min.js"></script>
 <script src="holidays.js"></script>
 <script src="festivals.js"></script>
+<script src="summaries.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

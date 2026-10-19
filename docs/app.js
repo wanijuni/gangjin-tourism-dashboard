@@ -302,12 +302,18 @@
 
     const tk = $('#takeaway'); tk.replaceChildren();
     const pk = D.peak.find((r) => r.month === M);
-    if (row && pk) {
-      const T = (s) => document.createTextNode(s), B = (s) => el('b', null, s);
-      tk.append(T(`${+M.slice(4)}월 외지인 방문은 일별 합계 `), B(fmt(row.outsider)), T('명으로 전체 방문의 '), B(row.outsider_share_pct + '%'),
-        T('였습니다.'), el('br'), T('가장 붐빈 날은 '), B(pk.day_label), T('로 외지인 '), B(fmt(pk.outsider)), T('명이 찾았고, 한 달 관광소비는 '),
-        B(row.spend_eok + '억원'), T('입니다.'));
+    const SUM = (window.SUMMARIES || {})[M];
+    $('#ai-month').textContent = M ? mLabel(M) : '';
+    let lines = SUM;
+    if (!lines && row && pk) {
+      // 요약이 아직 없는 달: 자동 문장
+      lines = [`외지인 ${fmt(row.outsider)}명(전체 방문의 ${row.outsider_share_pct}%)이 찾았습니다.`,
+        `가장 붐빈 날은 ${pk.day_label}로 외지인 ${fmt(pk.outsider)}명이었습니다.`,
+        `관광소비는 ${row.spend_eok}억원, 관광 검색은 ${fmt(row.search)}건입니다.`];
     }
+    (lines || []).forEach((t) => tk.append(el('li', null, t)));
+    $('#ai-note').textContent = SUM ? 'Claude가 이 달의 방문·소비·검색 데이터와 공휴일·축제 일정을 보고 작성한 요약입니다.' : '이 달의 AI 요약은 아직 없어 자동으로 만든 문장을 보여줍니다.';
+    $('.ai-badge').textContent = SUM ? 'AI 요약' : '자동 요약';
 
     const days = of('daily', M);
     dailyBars($('#ch-visit-daily'), days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.local, d.outsider] })),
