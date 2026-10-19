@@ -83,7 +83,7 @@
     const totals = days.map((d) => d3.sum(d.vals));
     const y0 = d3.scaleLinear([0, d3.max(totals) || 1], [0, 1]).nice();
     const ticks = y0.ticks(4);
-    const m = { t: 22, r: 6, b: 30, l: textW(svg, ticks.map((v) => compact.format(v))) + 10 };
+    const m = { t: 40, r: 6, b: 30, l: textW(svg, ticks.map((v) => compact.format(v))) + 10 };
     const x = d3.scaleBand(days.map((d) => d.key), [m.l, W - m.r]).paddingInner(0.25).paddingOuter(0.1);
     const y = d3.scaleLinear(y0.domain(), [H - m.b, m.t]);
     const info = new Map(days.map((d) => [d.key, dayInfo(d.key)]));
@@ -120,9 +120,20 @@
     if (pi >= 0) {
       const pd = days[pi], px = x(pd.key) + x.bandwidth() / 2;
       const lab = `최대 ${pd.label} · ${fmt(totals[pi])}${unit}`;
-      const lw = textW(svg, [lab], 'lab');
-      svg.append('text').attr('class', 'lab').attr('x', Math.min(Math.max(px, m.l + lw / 2), W - m.r - lw / 2))
-        .attr('y', y(totals[pi]) - 7).attr('text-anchor', 'middle').text(lab);
+      // 최대치: 막대 테두리 강조 + 진한 말풍선
+      const top = y(totals[pi]);
+      svg.append('rect').attr('x', x(pd.key) - 2).attr('width', x.bandwidth() + 4).attr('y', top - 2)
+        .attr('height', y(0) - top + 2).attr('rx', rx + 1).style('fill', 'none')
+        .style('stroke', 'var(--peak-bg)').attr('stroke-width', 2).attr('pointer-events', 'none');
+      const g2 = svg.append('g').attr('class', 'peak').attr('pointer-events', 'none');
+      const t = g2.append('text').attr('class', 'peak-t').attr('text-anchor', 'middle').attr('dy', '0.35em').text(lab);
+      const tw = t.node().getComputedTextLength(), bw = tw + 18, bh = 22;
+      const cx = Math.min(Math.max(px, m.l + bw / 2), W - m.r - bw / 2), cy = top - 8 - bh / 2;
+      g2.insert('rect', 'text').attr('x', cx - bw / 2).attr('y', cy - bh / 2).attr('width', bw).attr('height', bh).attr('rx', bh / 2)
+        .style('fill', 'var(--peak-bg)');
+      g2.insert('path', 'text').attr('d', `M${px - 5},${cy + bh / 2 - 0.5} L${px + 5},${cy + bh / 2 - 0.5} L${px},${cy + bh / 2 + 5} Z`)
+        .style('fill', 'var(--peak-bg)');
+      t.attr('x', cx).attr('y', cy);
     }
     svg.append('g').selectAll('rect').data(days).join('rect')
       .attr('x', (d) => x(d.key) - (x.step() - x.bandwidth()) / 2).attr('width', x.step())
