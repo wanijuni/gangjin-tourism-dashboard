@@ -94,7 +94,7 @@ th { text-align: left; font-weight: 600; color: var(--muted); padding: 7px 8px; 
 td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
 td.num, th.num { text-align: right; }
 
-.cmpbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 20px; }
+.cmpbar-unused { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 20px; }
 .vs { color: var(--muted); font-size: 13px; }
 .pres { display: flex; gap: 6px; }
 .pre, .seg button { font-size: 13px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
@@ -120,3 +120,21 @@ td.num, th.num { text-align: right; }
 .notice-ic { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #fff; color: var(--notice-badge); font-size: 12px; font-weight: 800; line-height: 1; }
 .notice p { margin: 0; font-weight: 500; }
 .take { padding-top: 4px; }
+
+.cmpctl { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+.unit-row, .pick-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.ctl-l { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.cmpctl select, .cmpctl input[type=date] { font: inherit; font-size: 14px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
+.range { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--muted); }
+.seg.unit { margin-bottom: 0; }
+.seg.unit button { padding: 5px 14px; }
+.coverage { margin: 0; font-size: 12.5px; color: var(--muted); }
+.coverage .warn { color: var(--notice-fg); background: var(--notice-bg); border: 1px solid var(--notice-line); border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+.coverage { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.coverage .sep { color: var(--axis); }
+.coverage .warn { margin-left: 0; }
+.coverage .cut { flex-basis: 100%; }
+.linkbtn { font: inherit; font-size: 12.5px; background: none; border: 0; padding: 0; color: var(--c0); text-decoration: underline; cursor: pointer; }
+#tbl-pairs { min-width: 560px; }
+#tbl-pairs th, #tbl-pairs td:first-child { white-space: nowrap; }

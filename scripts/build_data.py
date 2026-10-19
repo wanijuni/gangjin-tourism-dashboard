@@ -191,8 +191,26 @@ def main():
                     "n": int(num(r["중분류 검색건수"])), "pct": num(r["중분류 검색건수 비율"])}
                    for m, rows in get("search_area").items() for r in rows]
 
+    # ---- 일별 업종·검색유형 (기간 비교에서 아무 기간이나 합산하기 위해) ----
+    # 크기를 줄이려고 열 목록 + 날짜별 값 배열로 저장
+    def columnar(kind, label_col, value_col, skip):
+        vals = defaultdict(dict)
+        for m, rows in get(kind).items():
+            for r in rows:
+                lab = r[label_col].strip()
+                if lab in skip:
+                    continue
+                vals[r["기준년월"].strip()][lab] = vals[r["기준년월"].strip()].get(lab, 0) + int(num(r[value_col]))
+        cols = sorted({c for v in vals.values() for c in v if any(vv.get(c) for vv in vals.values())})
+        return {"cols": cols, "rows": {d: [v.get(c, 0) for c in cols] for d, v in sorted(vals.items())}}
+
+    daily_cat = columnar("spend_daily", "중분류", "소비액(천원)", {"관광총소비"})
+    daily_type = columnar("search_daily", "카테고리중분류명", "기초지자체 검색건수", {"전체"})
+
     out = {
         "generated": datetime.now(KST).isoformat(timespec="minutes"),
+        "daily_cat": daily_cat,
+        "daily_type": daily_type,
         "months": months,
         "warnings": warnings,
         "files": files,

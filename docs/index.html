@@ -119,18 +119,43 @@
 
   <!-- ===== 기간 비교 ===== -->
   <div id="compare" class="pane" hidden>
-    <div class="cmpbar">
-      <label class="ctrl">기준 <select id="cmp-a" aria-label="기준 월"></select></label>
-      <span class="vs">vs</span>
-      <label class="ctrl">비교 <select id="cmp-b" aria-label="비교 월"></select></label>
-      <span class="pres">
-        <button class="pre" data-pre="prev">전월</button>
-        <button class="pre" data-pre="yoy">전년 동월</button>
-      </span>
+    <div class="cmpctl">
+      <div class="unit-row">
+        <span class="ctl-l">단위</span>
+        <div class="seg unit" role="group" aria-label="비교 단위">
+          <button data-u="month" aria-pressed="true">월</button>
+          <button data-u="quarter" aria-pressed="false">분기</button>
+          <button data-u="half" aria-pressed="false">반기</button>
+          <button data-u="year" aria-pressed="false">연</button>
+          <button data-u="custom" aria-pressed="false">특정기간</button>
+        </div>
+      </div>
+      <div class="pick-row">
+        <div class="pick">
+          <span class="ctl-l"><i class="sw c0"></i>기준</span>
+          <select id="cmp-a" aria-label="기준 기간"></select>
+          <span class="range" id="rng-a" hidden>
+            <input type="date" id="a-s" aria-label="기준 시작일"> ~ <input type="date" id="a-e" aria-label="기준 종료일">
+          </span>
+        </div>
+        <span class="vs">vs</span>
+        <div class="pick">
+          <span class="ctl-l"><i class="sw cm"></i>비교</span>
+          <select id="cmp-b" aria-label="비교 기간"></select>
+          <span class="range" id="rng-b" hidden>
+            <input type="date" id="b-s" aria-label="비교 시작일"> ~ <input type="date" id="b-e" aria-label="비교 종료일">
+          </span>
+        </div>
+        <span class="pres">
+          <button class="pre" data-pre="prev">전기 대비</button>
+          <button class="pre" data-pre="yoy">전년 동기</button>
+        </span>
+      </div>
+      <p class="coverage" id="coverage"></p>
     </div>
 
     <div class="empty" id="cmp-empty" hidden>
-      <strong>비교할 다른 달의 데이터가 아직 없습니다.</strong>
+      <strong>비교할 다른 기간의 데이터가 아직 없습니다.</strong>
       <span>지금은 <span id="only-month"></span> 데이터만 반영되어 있습니다. 저장소의 <code>data/raw</code> 폴더에 다른 달 CSV를 올리면 두 달을 골라 나란히 비교할 수 있습니다.</span>
     </div>
 
@@ -138,7 +163,7 @@
       <div class="grid">
         <div class="card wide">
           <h3>핵심 지표 비교</h3>
-          <p class="note">월 합계와 일평균. 증감률은 비교 월 대비 기준 월의 변화, 외지인 비중은 %p 차이</p>
+          <p class="note">기간 합계와 일평균. 증감률은 비교 기간 대비 기준 기간의 변화, 외지인 비중은 %p 차이. 기간 길이가 다르면 일평균으로 비교하세요.</p>
           <div class="tbl-wrap">
             <table id="tbl-pairs">
               <thead><tr><th>지표</th><th class="num" id="th-a">기준</th><th class="num" id="th-b">비교</th><th class="num">증감</th><th class="num">증감률</th></tr></thead>
@@ -147,9 +172,9 @@
           </div>
         </div>
         <div class="card wide">
-          <h3>일별 추이 겹쳐보기</h3>
-          <p class="note">같은 날짜(1일~말일)끼리 겹쳐 비교합니다. 요일이 달라질 수 있어 주말 효과에 유의하세요.</p>
-          <div class="seg" role="group" aria-label="지표">
+          <h3 id="trend-title">추이 겹쳐보기</h3>
+          <p class="note" id="trend-note"></p>
+          <div class="seg metric" role="group" aria-label="지표">
             <button data-m="outsider" aria-pressed="true">외지인 방문자</button>
             <button data-m="total" aria-pressed="false">전체 방문자</button>
             <button data-m="spend_k" aria-pressed="false">관광소비</button>
@@ -160,17 +185,17 @@
         </div>
         <div class="card">
           <h3>업종 중분류별 소비액 비교</h3>
-          <p class="note">백만원</p>
+          <p class="note">기간 합계, 백만원</p>
           <div class="chart" id="ch-cmp-cat"></div>
         </div>
         <div class="card">
           <h3>방문자 거주지 비교 (시도)</h3>
-          <p class="note">%</p>
+          <p class="note">%. 여러 달이면 달마다 외지인 방문자 수로 가중 평균</p>
           <div class="chart" id="ch-cmp-sido"></div>
         </div>
         <div class="card">
           <h3>검색 유형 비교</h3>
-          <p class="note">건</p>
+          <p class="note">기간 합계, 건</p>
           <div class="chart" id="ch-cmp-type"></div>
         </div>
       </div>

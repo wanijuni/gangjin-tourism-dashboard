@@ -8,7 +8,7 @@
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
   let D = null;
-  const state = { tab: 'overview', month: null, a: null, b: null, metric: 'outsider' };
+  const state = { tab: 'overview', month: null, unit: 'month', a: null, b: null, ca: null, cb: null, bAuto: null, align: true, metric: 'outsider' };
 
   // ---------- helpers ----------
   const mLabel = (m) => `${m.slice(0, 4)}년 ${+m.slice(4)}월`;
@@ -141,37 +141,6 @@
       .on('mouseleave', () => tip.hide());
   }
 
-  function lines2(box, A, B, o) {
-    box.replaceChildren();
-    const W = Math.max(300, box.clientWidth), H = 240;
-    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
-    const y0 = d3.scaleLinear([0, d3.max([...A, ...B], (d) => d.v) || 1], [0, 1]).nice();
-    const ticks = y0.ticks(4);
-    const m = { t: 12, r: 10, b: 22, l: textW(svg, ticks.map((v) => compact.format(v))) + 10 };
-    const x = d3.scaleLinear([1, 31], [m.l, W - m.r]);
-    const y = d3.scaleLinear(y0.domain(), [H - m.b, m.t]);
-    svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', m.l).attr('x2', W - m.r)
-      .attr('y1', y).attr('y2', y).style('stroke', (v) => (v === 0 ? 'var(--axis)' : 'var(--grid)'));
-    svg.append('g').selectAll('text').data(ticks).join('text').attr('x', m.l - 8).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => compact.format(v));
-    svg.append('g').selectAll('text').data([1, 5, 10, 15, 20, 25, 31]).join('text').attr('x', x).attr('y', H - 6).attr('text-anchor', 'middle').text((d) => d + '일');
-    const line = d3.line().x((d) => x(d.d)).y((d) => y(d.v));
-    [[B, CM], [A, C0]].forEach(([s, c]) => svg.append('path').datum(s).attr('d', line).style('fill', 'none')
-      .style('stroke', c).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round'));
-    const rule = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--axis)').attr('visibility', 'hidden');
-    const dA = svg.append('circle').attr('r', 4).style('fill', C0).attr('visibility', 'hidden');
-    const dB = svg.append('circle').attr('r', 4).style('fill', CM).attr('visibility', 'hidden');
-    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).style('fill', 'transparent')
-      .on('mousemove', (ev) => {
-        const d = Math.max(1, Math.min(31, Math.round(x.invert(d3.pointer(ev)[0]))));
-        const a = A.find((p) => p.d === d), b = B.find((p) => p.d === d);
-        rule.attr('x1', x(d)).attr('x2', x(d)).attr('visibility', 'visible');
-        dA.attr('cx', x(d)).attr('cy', a ? y(a.v) : 0).attr('visibility', a ? 'visible' : 'hidden');
-        dB.attr('cx', x(d)).attr('cy', b ? y(b.v) : 0).attr('visibility', b ? 'visible' : 'hidden');
-        tip.show(ev, `${d}일`, [[C0, o.la, a ? fmt(a.v) + o.unit : '없음'], [CM, o.lb, b ? fmt(b.v) + o.unit : '없음']]);
-      })
-      .on('mouseleave', () => { rule.attr('visibility', 'hidden'); dA.attr('visibility', 'hidden'); dB.attr('visibility', 'hidden'); tip.hide(); });
-  }
-
   function heat(box, rows, typeOrder) {
     box.replaceChildren();
     if (!rows.length) return noData(box);
@@ -257,43 +226,234 @@
     });
   }
 
-  // ---------- compare ----------
+  // ---------- compare: periods ----------
+  const toDate = (s) => new Date(Date.UTC(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8)));
+  const ymd = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
+  const iso = (s) => `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+  const dot = (s) => `${s.slice(0, 4)}.${s.slice(4, 6)}.${s.slice(6, 8)}`;
+  const addDays = (s, n) => { const d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return ymd(d); };
+  const spanDays = (s, e) => Math.round((toDate(e) - toDate(s)) / 864e5) + 1;
+  const lastDay = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const pad = (n) => String(n).padStart(2, '0');
+  const UNIT_LEN = { month: 1, quarter: 3, half: 6, year: 12 };
+  const UNIT_WORD = { month: '전월', quarter: '전분기', half: '전반기', year: '전년', custom: '직전 같은 기간' };
+
+  function keyOf(unit, y, m) {
+    if (unit === 'month') return `${y}${pad(m)}`;
+    if (unit === 'quarter') return `${y}Q${Math.floor((m - 1) / 3) + 1}`;
+    if (unit === 'half') return `${y}H${m <= 6 ? 1 : 2}`;
+    return `${y}`;
+  }
+  function periodOf(unit, key) {
+    const y = +key.slice(0, 4);
+    let sm, label;
+    if (unit === 'month') { sm = +key.slice(4); label = `${y}년 ${sm}월`; }
+    else if (unit === 'quarter') { const q = +key.slice(5); sm = (q - 1) * 3 + 1; label = `${y}년 ${q}분기`; }
+    else if (unit === 'half') { const h = +key.slice(5); sm = h === 1 ? 1 : 7; label = `${y}년 ${h === 1 ? '상' : '하'}반기`; }
+    else { sm = 1; label = `${y}년`; }
+    const em = sm + UNIT_LEN[unit] - 1;
+    return { key, label, start: `${y}${pad(sm)}01`, end: `${y}${pad(em)}${lastDay(y, em)}` };
+  }
+  const periodKeys = (unit) => [...new Set(D.months.map((m) => keyOf(unit, +m.slice(0, 4), +m.slice(4))))].sort();
+  function shiftKey(unit, key, kind) {
+    const p = periodOf(unit, key), y = +p.start.slice(0, 4), m = +p.start.slice(4, 6);
+    if (kind === 'yoy') return keyOf(unit, y - 1, m);
+    let mm = m - UNIT_LEN[unit], yy = y;
+    while (mm < 1) { mm += 12; yy -= 1; }
+    return keyOf(unit, yy, mm);
+  }
+  function shiftRange(r, kind) {
+    if (kind === 'yoy') {
+      const back = (s) => { const y = +s.slice(0, 4) - 1, m = +s.slice(4, 6), d = Math.min(+s.slice(6, 8), lastDay(y, m)); return `${y}${pad(m)}${pad(d)}`; };
+      return { s: back(r.s), e: back(r.e) };
+    }
+    const e = addDays(r.s, -1);
+    return { s: addDays(e, -(spanDays(r.s, r.e) - 1)), e };
+  }
+  const customPeriod = (r) => ({ key: `${r.s}-${r.e}`, start: r.s, end: r.e, label: `${dot(r.s)}~${dot(r.e)}` });
+
+  // ---------- compare: aggregation ----------
+  let dayMap = null;
+  function daysIn(p) {
+    dayMap = dayMap || new Map(D.daily.map((d) => [d.date, d]));
+    const out = [];
+    for (let s = p.start; s <= p.end; s = addDays(s, 1)) { const d = dayMap.get(s); if (d) out.push(d); }
+    return out;
+  }
+  function agg(p) {
+    const days = daysIn(p), n = days.length;
+    const t = { total: 0, outsider: 0, local: 0, spend_k: 0, search: 0 };
+    for (const d of days) for (const k in t) t[k] += d[k];
+    const avg = (v) => (n ? Math.round(v / n) : null);
+    return {
+      days, n, cal: spanDays(p.start, p.end),
+      spend_eok: n ? Math.round(t.spend_k / 1e4) / 10 : null, spend_avg_k: avg(t.spend_k),
+      outsider: n ? t.outsider : null, outsider_avg: avg(t.outsider), local: n ? t.local : null, total: n ? t.total : null,
+      outsider_share_pct: t.total ? Math.round((t.outsider / t.total) * 1000) / 10 : null,
+      search: n ? t.search : null, search_avg: avg(t.search),
+    };
+  }
+  function sumCols(table, p) {
+    const out = new Map(table.cols.map((c) => [c, 0]));
+    for (let s = p.start; s <= p.end; s = addDays(s, 1)) {
+      const r = table.rows[s]; if (r) r.forEach((v, i) => out.set(table.cols[i], out.get(table.cols[i]) + v));
+    }
+    return out;
+  }
+  function sidoWeighted(a) {
+    const w = new Map();
+    for (const d of a.days) w.set(d.month, (w.get(d.month) || 0) + d.outsider);
+    const acc = new Map(); let W = 0;
+    for (const [m, wt] of w) {
+      const rows = of('origin_sido', m); if (!rows.length) continue;
+      W += wt; for (const r of rows) acc.set(r.sido, (acc.get(r.sido) || 0) + r.pct * wt);
+    }
+    return new Map([...acc].map(([k, v]) => [k, W ? Math.round((v / W) * 10) / 10 : null]));
+  }
+  function trendSeries(p, a, monthly) {
+    if (!monthly) return a.days.map((d) => ({ i: spanDays(p.start, d.date), v: d[state.metric], label: dot(d.date) }));
+    const g = d3.groups(a.days, (d) => d.month);
+    return g.map(([m, ds], idx) => ({ i: idx + 1, v: d3.sum(ds, (d) => d[state.metric]), label: `${m.slice(0, 4)}.${m.slice(4)}` + (ds.length < lastDay(+m.slice(0, 4), +m.slice(4)) ? ` (${ds.length}일)` : '') }));
+  }
+
+  function lines2(box, A, B, o) {
+    box.replaceChildren();
+    if (!A.length && !B.length) return noData(box, '두 기간 모두 자료가 없습니다');
+    const W = Math.max(300, box.clientWidth), H = 240;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const n = Math.max(2, d3.max([...A, ...B], (d) => d.i));
+    const y0 = d3.scaleLinear([0, d3.max([...A, ...B], (d) => d.v) || 1], [0, 1]).nice();
+    const ticks = y0.ticks(4);
+    const m = { t: 12, r: 14, b: 22, l: textW(svg, ticks.map((v) => compact.format(v))) + 10 };
+    const x = d3.scaleLinear([1, n], [m.l, W - m.r]);
+    const y = d3.scaleLinear(y0.domain(), [H - m.b, m.t]);
+    svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', m.l).attr('x2', W - m.r)
+      .attr('y1', y).attr('y2', y).style('stroke', (v) => (v === 0 ? 'var(--axis)' : 'var(--grid)'));
+    svg.append('g').selectAll('text').data(ticks).join('text').attr('x', m.l - 8).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => compact.format(v));
+    const tickLab = (i) => o.tick(i);
+    const maxT = Math.max(2, Math.floor((W - m.l - m.r) / 64));
+    const step = Math.max(1, Math.ceil((n - 1) / (maxT - 1)));
+    const xt = d3.range(1, n + 1, step); if (xt[xt.length - 1] !== n && n - xt[xt.length - 1] >= step / 2) xt.push(n);
+    svg.append('g').selectAll('text').data(xt).join('text').attr('x', x).attr('y', H - 6)
+      .attr('text-anchor', (d) => (d === 1 ? 'start' : d === n ? 'end' : 'middle')).text(tickLab);
+    const line = d3.line().defined((d) => d.v != null).x((d) => x(d.i)).y((d) => y(d.v));
+    [[B, CM], [A, C0]].forEach(([s, c]) => {
+      svg.append('path').datum(s).attr('d', line).style('fill', 'none').style('stroke', c).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+      if (o.monthly) svg.append('g').selectAll('circle').data(s).join('circle').attr('cx', (d) => x(d.i)).attr('cy', (d) => y(d.v)).attr('r', 3).style('fill', c);
+    });
+    const rule = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--axis)').attr('visibility', 'hidden');
+    const dA = svg.append('circle').attr('r', 4.5).style('fill', C0).attr('visibility', 'hidden');
+    const dB = svg.append('circle').attr('r', 4.5).style('fill', CM).attr('visibility', 'hidden');
+    const ia = new Map(A.map((d) => [d.i, d])), ib = new Map(B.map((d) => [d.i, d]));
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).style('fill', 'transparent')
+      .on('mousemove', (ev) => {
+        const i = Math.max(1, Math.min(n, Math.round(x.invert(d3.pointer(ev)[0]))));
+        const a = ia.get(i), b = ib.get(i);
+        rule.attr('x1', x(i)).attr('x2', x(i)).attr('visibility', 'visible');
+        dA.attr('cx', x(i)).attr('cy', a ? y(a.v) : 0).attr('visibility', a ? 'visible' : 'hidden');
+        dB.attr('cx', x(i)).attr('cy', b ? y(b.v) : 0).attr('visibility', b ? 'visible' : 'hidden');
+        tip.show(ev, o.monthly ? `${i}번째 달` : `${i}일째`, [
+          [C0, a ? a.label : o.la, a ? fmt(a.v) + o.unit : '자료 없음'],
+          [CM, b ? b.label : o.lb, b ? fmt(b.v) + o.unit : '자료 없음']]);
+      })
+      .on('mouseleave', () => { rule.attr('visibility', 'hidden'); dA.attr('visibility', 'hidden'); dB.attr('visibility', 'hidden'); tip.hide(); });
+  }
+
+  // ---------- compare: render ----------
   const METRICS = [
     ['spend_eok', '관광소비 총액', '억원'], ['spend_avg_k', '관광소비 일평균', '천원'],
     ['outsider', '외지인 방문자', '명'], ['outsider_avg', '외지인 일평균', '명'],
     ['local', '현지인 방문자', '명'], ['total', '전체 방문자', '명'],
     ['outsider_share_pct', '외지인 비중', '%'], ['search', '관광 검색건수', '건'], ['search_avg', '검색 일평균', '건'],
   ];
+  const dataMin = () => D.daily[0].date, dataMax = () => D.daily[D.daily.length - 1].date;
+  const clampR = (r) => ({ s: r.s < dataMin() ? dataMin() : r.s, e: r.e > dataMax() ? dataMax() : r.e });
+
+  function resolvePeriods() {
+    const u = state.unit;
+    if (u === 'custom') {
+      if (!state.ca) state.ca = { s: addDays(dataMax(), -29), e: dataMax() };
+      if (!state.cb || state.bAuto) state.cb = clampR(shiftRange(state.ca, state.bAuto || 'yoy'));
+      return [customPeriod(state.ca), customPeriod(state.cb)];
+    }
+    const keys = periodKeys(u);
+    if (!keys.includes(state.a)) state.a = keys[keys.length - 1];
+    const others = keys.filter((k) => k !== state.a);
+    if (state.bAuto && others.includes(shiftKey(u, state.a, state.bAuto))) state.b = shiftKey(u, state.a, state.bAuto);
+    if (!others.includes(state.b)) {
+      const pv = shiftKey(u, state.a, 'prev'), yy = shiftKey(u, state.a, 'yoy');
+      state.b = others.includes(pv) ? pv : others.includes(yy) ? yy : others[others.length - 1];
+    }
+    return [periodOf(u, state.a), periodOf(u, state.b)];
+  }
 
   function renderCompare() {
-    const months = D.months;
-    if (months.length < 2) {
+    const u = state.unit;
+    $$('.seg.unit button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.u === u)));
+    if (D.months.length < 2) {
       $('#cmp-empty').hidden = false; $('#cmp-body').hidden = true;
-      $('#only-month').textContent = months.length ? mLabel(months[0]) : '어느 달의';
-      $('#cmp-a').replaceChildren(...months.map((m) => new Option(mLabel(m), m)));
-      $('#cmp-b').replaceChildren(new Option('—', '')); $('#cmp-b').disabled = true;
-      $$('.pre').forEach((b) => (b.disabled = true));
+      $('#only-month').textContent = D.months.length ? mLabel(D.months[0]) : '어느 달의';
       return;
     }
-    $('#cmp-empty').hidden = true; $('#cmp-body').hidden = false; $('#cmp-b').disabled = false;
-    const A = months.includes(state.a) ? state.a : months[months.length - 1];
-    const others = months.filter((m) => m !== A);
-    const B = others.includes(state.b) ? state.b : others.includes(prevM(A)) ? prevM(A) : others.includes(yoyM(A)) ? yoyM(A) : others[others.length - 1];
-    state.a = A; state.b = B;
-    $('#cmp-a').replaceChildren(...months.map((m) => new Option(mLabel(m), m))); $('#cmp-a').value = A;
-    $('#cmp-b').replaceChildren(...others.map((m) => new Option(mLabel(m), m))); $('#cmp-b').value = B;
-    $('.pre[data-pre=prev]').disabled = !others.includes(prevM(A));
-    $('.pre[data-pre=yoy]').disabled = !others.includes(yoyM(A));
-    const la = mLabel(A), lb = mLabel(B);
+    $('#cmp-empty').hidden = true; $('#cmp-body').hidden = false;
+    const [PA, PB] = resolvePeriods();
+    const custom = u === 'custom';
+    $('#cmp-a').hidden = custom; $('#cmp-b').hidden = custom; $('#rng-a').hidden = !custom; $('#rng-b').hidden = !custom;
+    if (custom) {
+      for (const [id, v] of [['#a-s', state.ca.s], ['#a-e', state.ca.e], ['#b-s', state.cb.s], ['#b-e', state.cb.e]]) {
+        const inp = $(id); inp.min = iso(dataMin()); inp.max = iso(dataMax());
+        if (inp !== document.activeElement) inp.value = iso(v);
+      }
+      $('.pre[data-pre=prev]').disabled = false; $('.pre[data-pre=yoy]').disabled = false;
+    } else {
+      const keys = periodKeys(u);
+      $('#cmp-a').replaceChildren(...keys.slice().reverse().map((k) => new Option(periodOf(u, k).label, k))); $('#cmp-a').value = state.a;
+      $('#cmp-b').replaceChildren(...keys.filter((k) => k !== state.a).reverse().map((k) => new Option(periodOf(u, k).label, k))); $('#cmp-b').value = state.b;
+      $('.pre[data-pre=prev]').disabled = !keys.includes(shiftKey(u, state.a, 'prev'));
+      $('.pre[data-pre=yoy]').disabled = !keys.includes(shiftKey(u, state.a, 'yoy'));
+    }
+    $('.pre[data-pre=prev]').textContent = UNIT_WORD[u] + ' 대비';
+    $('.pre[data-pre=yoy]').hidden = u === 'year';
+
+    const A = agg(PA);
+    // 기준 기간 자료가 도중에 끝나면(예: 올해는 9월까지) 비교 기간도 같은 길이까지만 합산
+    let PBx = PB, cutNote = null;
+    const lastA = A.n ? A.days[A.n - 1].date : null;
+    if (lastA && lastA < PA.end && lastA === dataMax()) {
+      const len = spanDays(PA.start, lastA), endB = addDays(PB.start, len - 1);
+      if (state.align && endB < PB.end) { PBx = { ...PB, end: endB, label: `${PB.label}(${+endB.slice(4, 6)}/${+endB.slice(6, 8)}까지)` }; }
+      cutNote = { lastA, endB, on: state.align && endB < PB.end, possible: endB < PB.end };
+    }
+    const B = agg(PBx);
+    const la = PA.label + (cutNote ? `(${+lastA.slice(4, 6)}/${+lastA.slice(6, 8)}까지)` : ''), lb = PBx.label;
     $('#th-a').textContent = la; $('#th-b').textContent = lb; $('#lg-a').textContent = la; $('#lg-b').textContent = lb;
 
-    const ra = D.monthly.find((r) => r.month === A), rb = D.monthly.find((r) => r.month === B);
+    // coverage line
+    const cov = $('#coverage'); cov.replaceChildren();
+    const part = (p, a, name) => {
+      const s = el('span', null, `${name} ${dot(p.start)} ~ ${dot(p.end)} · ${a.cal}일`);
+      if (a.n < a.cal) s.append(el('span', 'warn', a.n ? `자료 있는 ${a.n}일만 합산` : '자료 없음'));
+      return s;
+    };
+    cov.append(part(PA, A, '기준'), el('span', 'sep', '|'), part(PBx, B, '비교'));
+    if (A.n && B.n && Math.abs(A.n - B.n) / Math.max(A.n, B.n) > 0.05) cov.append(el('span', 'warn', '기간 길이가 달라 일평균 비교를 권장합니다'));
+    if (cutNote && cutNote.possible) {
+      const line = el('span', 'cut');
+      line.append(document.createTextNode(cutNote.on
+        ? `기준 기간 자료가 ${dot(cutNote.lastA)}까지라 비교 기간도 같은 길이(${dot(cutNote.endB)}까지)로 맞췄습니다. `
+        : '비교 기간 전체를 합산 중입니다. '));
+      const btn = el('button', 'linkbtn', cutNote.on ? '비교 기간 전체 보기' : '같은 길이로 맞추기');
+      btn.addEventListener('click', () => { state.align = !state.align; render(); });
+      line.append(btn); cov.append(line);
+    }
+
+    // KPI table
     const tb = $('#tbl-pairs tbody'); tb.replaceChildren();
-    const nf = (v, u) => (v == null ? '—' : (u === '억원' || u === '%' ? String(v) : fmt(v)) + u);
+    const nf = (v, unit) => (v == null ? '—' : (unit === '억원' || unit === '%' ? String(v) : fmt(v)).replace('\u2212', '-') + unit);
     for (const [k, label, unit] of METRICS) {
-      const av = ra[k], bv = rb[k];
+      const av = A[k], bv = B[k];
       const diff = av != null && bv != null ? Math.round((av - bv) * 10) / 10 : null;
-      const pct = unit !== '%' && bv ? Math.round((av / bv - 1) * 1000) / 10 : null;
+      const pct = unit !== '%' && av != null && bv ? Math.round((av / bv - 1) * 1000) / 10 : null;
       const sign = (v) => (v > 0 ? '+' : '');
       const tr = el('tr');
       tr.append(el('td', null, label), el('td', 'num', nf(av, unit)), el('td', 'num', nf(bv, unit)));
@@ -303,19 +463,28 @@
       tb.append(tr);
     }
 
-    const unit = { outsider: '명', total: '명', spend_k: '천원', search: '건' }[state.metric];
-    const series = (m) => of('daily', m).map((d) => ({ d: +d.date.slice(6, 8), v: d[state.metric] }));
-    lines2($('#ch-cmp-daily'), series(A), series(B), { la, lb, unit });
+    // trend
+    const monthly = Math.max(A.cal, B.cal) > 62;
+    $('#trend-title').textContent = monthly ? '월별 추이 겹쳐보기' : '일별 추이 겹쳐보기';
+    $('#trend-note').textContent = monthly
+      ? '각 기간의 1번째 달, 2번째 달…끼리 겹쳐 비교합니다. 일부만 포함된 달은 괄호에 일수를 표시합니다.'
+      : '각 기간의 1일째, 2일째…끼리 겹쳐 비교합니다. 요일이 달라질 수 있어 주말 효과에 유의하세요.';
+    const sa = trendSeries(PA, A, monthly), sb = trendSeries(PBx, B, monthly);
+    const unitTxt = { outsider: '명', total: '명', spend_k: '천원', search: '건' }[state.metric];
+    const aLab = new Map(sa.map((d) => [d.i, d.label]));
+    const tick = monthly
+      ? (i) => { const l = aLab.get(i); return l ? `${+l.slice(5, 7)}월` : `${i}번째`; }
+      : (i) => { const s = addDays(PA.start, i - 1); return `${+s.slice(4, 6)}/${+s.slice(6, 8)}`; };
+    lines2($('#ch-cmp-daily'), sa, sb, { la, lb, unit: unitTxt, monthly, tick });
 
-    const pair = (key, labelKey, valKey) => {
-      const get = (m) => new Map(of(key, m).map((r) => [r[labelKey], r[valKey]]));
-      const a = get(A), b = get(B);
-      return [...new Set([...a.keys(), ...b.keys()])].map((k) => ({ label: k, a: a.get(k) ?? null, b: b.get(k) ?? null }))
-        .sort((p, q) => (q.a ?? -1) - (p.a ?? -1));
-    };
-    hbars2($('#ch-cmp-cat'), pair('spend_cat', 'cat', 'mw'), { la, lb, fmt: (v) => fmt(v) });
-    hbars2($('#ch-cmp-sido'), pair('origin_sido', 'sido', 'pct'), { la, lb, fmt: (v) => v + '%' });
-    hbars2($('#ch-cmp-type'), pair('search_type', 'type', 'n'), { la, lb, fmt: (v) => fmt(v) });
+    // distributions
+    const pairMaps = (ma, mb, scale) => [...new Set([...ma.keys(), ...mb.keys()])]
+      .map((k) => ({ label: k, a: ma.get(k) ? scale(ma.get(k)) : (ma.has(k) && A.n ? 0 : null), b: mb.get(k) ? scale(mb.get(k)) : (mb.has(k) && B.n ? 0 : null) }))
+      .filter((r) => (r.a || 0) + (r.b || 0) > 0)
+      .sort((p, q) => (q.a ?? -1) - (p.a ?? -1));
+    hbars2($('#ch-cmp-cat'), pairMaps(sumCols(D.daily_cat, PA), sumCols(D.daily_cat, PBx), (v) => Math.round(v / 1000)), { la, lb, fmt: (v) => fmt(v) });
+    hbars2($('#ch-cmp-sido'), pairMaps(sidoWeighted(A), sidoWeighted(B), (v) => v), { la, lb, fmt: (v) => v + '%' });
+    hbars2($('#ch-cmp-type'), pairMaps(sumCols(D.daily_type, PA), sumCols(D.daily_type, PBx), (v) => v), { la, lb, fmt: (v) => fmt(v) });
   }
 
   // ---------- footer ----------
@@ -339,12 +508,32 @@
 
   $$('.tab').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; history.replaceState(null, '', '#' + state.tab); render(); }));
   $('#month').addEventListener('change', (e) => { state.month = e.target.value; render(); });
-  $('#cmp-a').addEventListener('change', (e) => { state.a = e.target.value; render(); });
-  $('#cmp-b').addEventListener('change', (e) => { state.b = e.target.value; render(); });
-  $$('.pre').forEach((b) => b.addEventListener('click', () => { state.b = b.dataset.pre === 'prev' ? prevM(state.a) : yoyM(state.a); render(); }));
-  $$('.seg button').forEach((b) => b.addEventListener('click', () => {
+  $('#cmp-a').addEventListener('change', (e) => { state.a = e.target.value; state.b = null; render(); });
+  $('#cmp-b').addEventListener('change', (e) => { state.b = e.target.value; state.bAuto = null; render(); });
+  $$('.seg.unit button').forEach((b) => b.addEventListener('click', () => {
+    if (state.unit === b.dataset.u) return;
+    state.unit = b.dataset.u; state.a = null; state.b = null; render();
+  }));
+  $$('.pre').forEach((b) => b.addEventListener('click', () => {
+    state.bAuto = b.dataset.pre;
+    if (state.unit === 'custom') state.cb = clampR(shiftRange(state.ca, b.dataset.pre));
+    else state.b = shiftKey(state.unit, state.a, b.dataset.pre);
+    render();
+  }));
+  // 날짜 입력: 완성된 날짜이고 시작<=종료일 때만 반영, 포커스를 잃으면 사용 중인 값으로 되돌림
+  [['a', '#a-s', '#a-e'], ['b', '#b-s', '#b-e']].forEach(([w, si, ei]) => {
+    const onChange = () => {
+      const s = $(si).value.replace(/-/g, ''), e = $(ei).value.replace(/-/g, '');
+      if (!/^\d{8}$/.test(s) || !/^\d{8}$/.test(e) || !$(si).validity.valid || !$(ei).validity.valid || s > e) return;
+      const r = clampR({ s, e });
+      if (w === 'a') state.ca = r; else { state.cb = r; state.bAuto = null; }
+      render();
+    };
+    [si, ei].forEach((id) => { $(id).addEventListener('change', onChange); $(id).addEventListener('blur', () => setTimeout(render, 0)); });
+  });
+  $$('.seg.metric button').forEach((b) => b.addEventListener('click', () => {
     state.metric = b.dataset.m;
-    $$('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    $$('.seg.metric button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     render();
   }));
   $$('.more-btn').forEach((b) => b.addEventListener('click', () => {
