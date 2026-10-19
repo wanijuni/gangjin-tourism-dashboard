@@ -193,3 +193,5 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 #tbl-pairs tbody tr:hover { background: var(--grid); }
 .mdot { display: inline-block; width: 4px; height: 16px; border-radius: 2px; margin-right: 9px; vertical-align: -3px; }
 .mdot.visit { background: var(--c0); } .mdot.spend { background: var(--c1); } .mdot.search { background: var(--c2); }
+/* 섹션 제목 옆 설명 칸 폭을 같게 해서 '자세히 보기' 버튼 위치를 위아래로 맞춤 */
+.sec small { display: inline-block; min-width: 10.5em; }
