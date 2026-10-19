@@ -331,12 +331,26 @@
 
     const desc = (a, b) => b.value - a.value;
     const areaRows = of('visitors_by_area', M);
-    const totalArea = d3.sum(areaRows, (r) => r.visitors);
-    choropleth($('#ch-visit-map'), areaRows.map((r) => ({ label: r.area, value: r.visitors, pct: r.pct })), {
-      short: (r) => (r.value >= 10000 ? (Math.round(r.value / 1000) / 10) + '만' : fmt(r.value)) + '명',
-      lines: (r) => [[null, '방문자 수', fmt(r.value) + '명'], [null, '비율', (r.pct ?? Math.round(r.value / totalArea * 1000) / 10) + '%']],
+    const PM = prevM(M), prevRows = new Map(of('visitors_by_area', PM).map((r) => [r.area, r.visitors]));
+    const hasPrev = prevRows.size > 0;
+    const chgA = (a, b) => (b ? Math.round((a / b - 1) * 1000) / 10 : null);
+    const shortA = (r) => (r.value >= 10000 ? (Math.round(r.value / 1000) / 10) + '만' : fmt(r.value)) + '명';
+    const arows = areaRows.map((r) => ({ label: r.area, value: r.visitors, pct: r.pct, other: prevRows.get(r.area) }));
+    $('#ov-map-t').textContent = `${mLabel(M)}` + (hasPrev ? ` (▲▼: ${mLabel(PM)} 대비)` : '');
+    $('#ov-map-note').textContent = '전남광주통합특별시 강진군 · 노랑 → 초록 → 파랑 순으로 방문자가 많습니다. 읍면에 올리면 수치가 보입니다. (월간 집계라 일별 추이 합계와 기준이 다름)';
+    choropleth($('#ch-visit-map'), arows, {
+      short: shortA, noValue: hasPrev,
+      sub: (r) => { const c = chgA(r.value, r.other); return c == null ? null : [tri(c) + Math.abs(c) + '%', c > 0 ? 'up' : c < 0 ? 'down' : '']; },
+      lines: (r) => { const c = chgA(r.value, r.other); return [[null, '방문자 수', fmt(r.value) + '명'], [null, '비율', r.pct + '%']].concat(hasPrev ? [[null, '전월', r.other == null ? '없음' : fmt(r.other) + '명'], [null, '증감률', c == null ? '—' : tri(c) + Math.abs(c) + '%']] : []); },
     });
-    hbars($('#ch-visit-area'), of('visitors_by_area', M).map((r) => ({ label: r.area, value: r.visitors })).sort(desc), { name: '방문자 수', fmt: (v) => fmt(v) + '명' });
+    $('#toa-a').textContent = mLabel(M); $('#toa-b').textContent = hasPrev ? mLabel(PM) : '전월';
+    const tbO = $('#tbl-ov-area tbody'); tbO.replaceChildren();
+    arows.slice().sort((p, q) => q.value - p.value).forEach((r, i) => {
+      const c = chgA(r.value, r.other), tr = el('tr');
+      tr.append(el('td', 'rk', String(i + 1)), el('td', 'metric', r.label), el('td', 'num', fmt(r.value)), el('td', 'num muted', r.other == null ? '—' : fmt(r.other)),
+        el('td', c == null ? 'num' : c > 0 ? 'num up' : c < 0 ? 'num down' : 'num', c == null ? '—' : tri(c) + Math.abs(c) + '%'));
+      tbO.append(tr);
+    });
     hbars($('#ch-origin-sido'), of('origin_sido', M).map((r) => ({ label: r.sido, value: r.pct })).sort(desc), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
     hbars($('#ch-spend-major'), of('industry_major', M).map((r) => ({ label: r.major, value: r.pct })).sort(desc), { name: '지출 비중', fmt: (v) => v + '%', color: () => C1 });
     hbars($('#ch-spend-cat'), of('spend_cat', M).map((r) => ({ label: r.cat, value: r.mw })).sort(desc), { name: '소비액', fmt: (v) => fmt(v) + '백만원', color: () => C1 });
