@@ -15,7 +15,7 @@
   --err: #c0392b;
   --radius: 10px;
   --shadow: 0 6px 20px rgba(0, 0, 0, .12);
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -176,3 +176,11 @@ td.num, th.num { text-align: right; }
 .chart text.map-lab .d.up { fill: var(--up); } .chart text.map-lab .d.down { fill: var(--down); }
 .chart text.map-lab.on-dark .d.up { fill: #ffb3b8; } .chart text.map-lab.on-dark .d.down { fill: #b9d4ff; }
 .map-single { max-width: 720px; margin: 0 auto; }
+
+/* Pretendard: 제목·숫자는 굵고 또렷하게 */
+body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
+.title { font-weight: 800; letter-spacing: -0.03em; }
+.kpi-v { font-weight: 800; letter-spacing: -0.03em; }
+.sec, .card h3 { letter-spacing: -0.02em; }
+.card h3 { font-weight: 700; }
+.chart text { font-family: var(--font); }

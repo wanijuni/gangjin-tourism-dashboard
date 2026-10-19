@@ -744,6 +744,8 @@
     if (open) render();
   }));
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+  // 글꼴(Pretendard)이 다 받아지면 글자 폭에 맞춰 차트를 다시 그림
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (D) render(); });
 
   fetch('gangjin_emd.geojson').then((r) => (r.ok ? r.json() : null)).then((g) => { GEO = g; if (D) render(); }).catch(() => {});
   fetch('data/data.json', { cache: 'no-cache' })
