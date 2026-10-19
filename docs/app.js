@@ -216,10 +216,12 @@
   }
 
   // ---------- overview ----------
+  // 증감 기호: 증가 ▲, 감소 ▼, 변화 없음은 기호 없이
+  const tri = (v) => (v > 0 ? '▲' : v < 0 ? '▼' : '');
   function deltaText(box, v, pp) {
     box.replaceChildren();
     if (v == null) { box.textContent = '전월 데이터 추가 시 비교'; return; }
-    const s = el('span', v > 0 ? 'up' : v < 0 ? 'down' : '', (v > 0 ? '+' : '') + v + (pp ? '%p' : '%'));
+    const s = el('span', v > 0 ? 'up' : v < 0 ? 'down' : '', tri(v) + Math.abs(v) + (pp ? '%p' : '%'));
     box.append(s, document.createTextNode(' 전월 대비'));
   }
 
@@ -514,12 +516,12 @@
       const av = A[k], bv = B[k];
       const diff = av != null && bv != null ? Math.round((av - bv) * 10) / 10 : null;
       const pct = unit !== '%' && av != null && bv ? Math.round((av / bv - 1) * 1000) / 10 : null;
-      const sign = (v) => (v > 0 ? '+' : '');
+      const sign = tri;
       const tr = el('tr');
       tr.append(el('td', null, label), el('td', 'num', nf(av, unit)), el('td', 'num', nf(bv, unit)));
       const cls = diff > 0 ? 'num up' : diff < 0 ? 'num down' : 'num';
-      tr.append(el('td', cls, diff == null ? '—' : sign(diff) + (unit === '%' ? diff + '%p' : nf(diff, unit))));
-      tr.append(el('td', pct == null ? 'num' : pct > 0 ? 'num up' : pct < 0 ? 'num down' : 'num', pct == null ? '—' : sign(pct) + pct + '%'));
+      tr.append(el('td', cls, diff == null ? '—' : sign(diff) + (unit === '%' ? Math.abs(diff) + '%p' : nf(Math.abs(diff), unit))));
+      tr.append(el('td', pct == null ? 'num' : pct > 0 ? 'num up' : pct < 0 ? 'num down' : 'num', pct == null ? '—' : sign(pct) + Math.abs(pct) + '%'));
       tb.append(tr);
     }
 
