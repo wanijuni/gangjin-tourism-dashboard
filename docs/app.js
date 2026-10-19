@@ -358,14 +358,34 @@
   function lines2(box, A, B, o) {
     box.replaceChildren();
     if (!A.length && !B.length) return noData(box, '두 기간 모두 자료가 없습니다');
-    const W = Math.max(300, box.clientWidth), H = 240;
-    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     const n = Math.max(2, d3.max([...A, ...B], (d) => d.i));
+    const daily = !o.monthly && o.startA && o.startB;
+    const keyA = (i) => addDays(o.startA, i - 1), keyB = (i) => addDays(o.startB, i - 1);
+    if (daily) dayLegend(box, d3.range(1, n + 1).flatMap((i) => [keyA(i), keyB(i)]));
+    const W = Math.max(300, box.clientWidth), H = daily ? 278 : 240;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     const y0 = d3.scaleLinear([0, d3.max([...A, ...B], (d) => d.v) || 1], [0, 1]).nice();
     const ticks = y0.ticks(4);
-    const m = { t: 12, r: 14, b: 22, l: textW(svg, ticks.map((v) => compact.format(v))) + 10 };
+    const m = { t: 12, r: 14, b: daily ? 60 : 22, l: Math.max(textW(svg, ticks.map((v) => compact.format(v))), daily ? textW(svg, ['기준', '비교']) + 8 : 0) + 10 };
     const x = d3.scaleLinear([1, n], [m.l, W - m.r]);
     const y = d3.scaleLinear(y0.domain(), [H - m.b, m.t]);
+    if (daily) {
+      // 기준·비교 기간 각각의 쉬는 날을 축 아래 두 줄 색 띠로 표시
+      const cw = Math.max(2, Math.min(14, (x(2) - x(1)) * 0.75));
+      const rowsY = [[keyA, H - m.b + 12, '기준', C0], [keyB, H - m.b + 29, '비교', 'var(--muted)']];
+      // 기준 기간 쉬는 날은 배경도 옅게 칠함
+      svg.append('g').selectAll('rect').data(d3.range(1, n + 1).filter((i) => dayInfo(keyA(i)))).join('rect')
+        .attr('x', (i) => x(i) - (x(2) - x(1)) / 2).attr('width', x(2) - x(1)).attr('y', m.t).attr('height', H - m.b - m.t)
+        .style('fill', 'var(--rest-bg)');
+      for (const [kf, yy, lab, col] of rowsY) {
+        svg.append('text').attr('x', m.l - 14).attr('y', yy + 2.5).attr('dy', '0.32em').attr('text-anchor', 'end')
+          .style('font-size', '11px').style('fill', col).style('font-weight', 600).text(lab);
+        svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', yy + 2.5).attr('y2', yy + 2.5).style('stroke', 'var(--grid)');
+        svg.append('g').selectAll('rect').data(d3.range(1, n + 1).filter((i) => dayInfo(kf(i)))).join('rect')
+          .attr('x', (i) => x(i) - cw / 2).attr('width', cw).attr('y', yy).attr('height', 5).attr('rx', 1.5)
+          .style('fill', (i) => DAY_COLOR[dayInfo(kf(i)).type]);
+      }
+    }
     svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', m.l).attr('x2', W - m.r)
       .attr('y1', y).attr('y2', y).style('stroke', (v) => (v === 0 ? 'var(--axis)' : 'var(--grid)'));
     svg.append('g').selectAll('text').data(ticks).join('text').attr('x', m.l - 8).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => compact.format(v));
@@ -373,8 +393,9 @@
     const maxT = Math.max(2, Math.floor((W - m.l - m.r) / 64));
     const step = Math.max(1, Math.ceil((n - 1) / (maxT - 1)));
     const xt = d3.range(1, n + 1, step); if (xt[xt.length - 1] !== n && n - xt[xt.length - 1] >= step / 2) xt.push(n);
-    svg.append('g').selectAll('text').data(xt).join('text').attr('x', x).attr('y', H - 6)
-      .attr('text-anchor', (d) => (d === 1 ? 'start' : d === n ? 'end' : 'middle')).text(tickLab);
+    svg.append('g').selectAll('text').data(xt).join('text').attr('x', x).attr('y', H - (daily ? 3 : 6))
+      .attr('text-anchor', (d) => (d === 1 ? 'start' : d === n ? 'end' : 'middle')).text(tickLab)
+      .style('fill', (i) => { if (!daily) return null; const f = dayInfo(keyA(i)); return !f ? null : f.type === '토' ? 'var(--day-sat)' : 'var(--day-sun)'; });
     const line = d3.line().defined((d) => d.v != null).x((d) => x(d.i)).y((d) => y(d.v));
     [[B, CM], [A, C0]].forEach(([s, c]) => {
       svg.append('path').datum(s).attr('d', line).style('fill', 'none').style('stroke', c).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
@@ -514,7 +535,7 @@
     const tick = monthly
       ? (i) => { const l = aLab.get(i); return l ? `${+l.slice(5, 7)}월` : `${i}번째`; }
       : (i) => { const s = addDays(PA.start, i - 1); return `${+s.slice(4, 6)}/${+s.slice(6, 8)}`; };
-    lines2($('#ch-cmp-daily'), sa, sb, { la, lb, unit: unitTxt, monthly, tick });
+    lines2($('#ch-cmp-daily'), sa, sb, { la, lb, unit: unitTxt, monthly, tick, startA: PA.start, startB: PBx.start });
 
     // distributions
     const pairMaps = (ma, mb, scale) => [...new Set([...ma.keys(), ...mb.keys()])]
