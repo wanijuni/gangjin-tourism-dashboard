@@ -26,6 +26,12 @@ jobs:
           python-version: "3.12"
       - name: CSV 합치기
         run: python scripts/build_data.py
+      - name: 화면 파일에 버전 붙이기 (브라우저가 예전 파일을 쓰지 않도록)
+        run: |
+          V="${GITHUB_SHA::8}"
+          sed -i -E "s#(src|href)=\"(app\.js|style\.css|holidays\.js|festivals\.js)\"#\1=\"\2?v=${V}\"#g" docs/index.html
+          sed -i -E "s#fetch\('gangjin_emd\.geojson'\)#fetch('gangjin_emd.geojson?v=${V}')#" docs/app.js
+          grep -n "?v=" docs/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
