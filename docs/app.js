@@ -276,6 +276,28 @@
     box.append(ol, el('div', 'ex-src', X.src));
   }
 
+  // 요약 문장 속 증감 색칠: ▲·▼ 수치와 "N% 늘었/줄었" 같은 표현 (증가 빨강, 감소 파랑)
+  const UPW = /^(늘|증가|많|높|올|상승)/, DNW = /^(줄|감소|적|낮|떨어|하락)/;
+  function colorDelta(li, t) {
+    const re = /([▲▼])\s?\d[\d,]*(?:\.\d+)?(?:%p|%)?|\d[\d,]*(?:\.\d+)?%p?/g;
+    let last = 0, mm;
+    while ((mm = re.exec(t))) {
+      let cls = null;
+      if (mm[1]) cls = mm[1] === '▲' ? 'up' : 'down';
+      else {
+        // 뒤따르는 말(괄호·마침표 전까지)에서 첫 증감 동사를 찾음
+        const rest = t.slice(re.lastIndex).split(/[()]|\.(?!\d)/)[0];
+        const w = rest.match(/(늘|증가|많|높|올|상승|줄|감소|적|낮|떨어|하락)/);
+        if (w && !/중 가장|가장/.test(rest.slice(0, w.index))) cls = UPW.test(w[1]) ? 'up' : DNW.test(w[1]) ? 'down' : null;
+      }
+      if (!cls) continue;
+      if (mm.index > last) li.append(document.createTextNode(t.slice(last, mm.index)));
+      li.append(el('span', cls, mm[0]));
+      last = re.lastIndex;
+    }
+    li.append(document.createTextNode(t.slice(last)));
+  }
+
   function hbars(box, rows, o) {
     box.replaceChildren();
     if (!rows.length) return noData(box);
@@ -444,7 +466,7 @@
         `가장 붐빈 날은 ${pk.day_label}로 외지인 ${fmt(pk.outsider)}명이었습니다.`,
         `관광소비는 ${row.spend_eok}억원, 관광 검색은 ${fmt(row.search)}건입니다.`];
     }
-    (lines || []).forEach((t) => tk.append(el('li', null, t)));
+    (lines || []).forEach((t) => { const li = el('li'); colorDelta(li, t); tk.append(li); });
     $('#ai-note').textContent = SUM ? 'Claude가 이 달의 방문·소비·검색 데이터와 공휴일·축제 일정을 보고 작성한 요약입니다.' : '이 달의 AI 요약은 아직 없어 자동으로 만든 문장을 보여줍니다.';
     $('.ai-badge').textContent = SUM ? 'AI 요약' : '자동 요약';
 
