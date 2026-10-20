@@ -254,6 +254,7 @@
       <li>거주지·읍면·업종·유형 분포 파일에는 기준월 열이 없어, 파일명의 연·월을 기준월로 씁니다.</li>
       <li>출처: 한국관광공사 데이터랩(datalab.visitkorea.or.kr). 원본 CSV는 저장소 <code>data/raw</code> 폴더에 있습니다.</li>
       <li>날씨: Open-Meteo 과거 기상 자료(ERA5 재분석, 강진군청 부근 좌표 기준)로, 기상청 관측값과 조금 다를 수 있습니다. 비는 하루 강수량 1mm 이상, 맑음·구름많음·흐림은 일조시간 비율로 나눴습니다.</li>
+      <li>방문 통계: GoatCounter로 접속 수만 셉니다(쿠키·개인정보를 모으지 않음).</li>
       <li>글꼴: Pretendard(SIL Open Font License 1.1), 지도 경계: vuski/admdongkor 행정동 경계</li>
     </ul>
     <details>
@@ -269,5 +270,7 @@
 <script src="festivals.js"></script>
 <script src="summaries.js"></script>
 <script src="app.js"></script>
+<!-- 방문 통계: GoatCounter (쿠키·개인정보 수집 없음). 스크립트는 내부망에서도 되도록 저장소에 직접 둠 -->
+<script data-goatcounter="https://juniwani.goatcounter.com/count" async src="vendor/count.js"></script>
 </body>
 </html>

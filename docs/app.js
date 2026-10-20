@@ -907,7 +907,12 @@
     if (state.tab === 'overview') renderOverview(); else renderCompare();
   }
 
-  $$('.tab').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; history.replaceState(null, '', '#' + state.tab); render(); }));
+  $$('.tab').forEach((b) => b.addEventListener('click', () => {
+    const prev = state.tab;
+    state.tab = b.dataset.tab; history.replaceState(null, '', '#' + state.tab); render();
+    // 방문 통계(GoatCounter): 탭을 바꿔 본 것도 한 번의 조회로 기록
+    try { if (prev !== state.tab && window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: location.pathname + '#' + state.tab, title: b.textContent.trim() }); } catch (e) { /* 통계 실패는 무시 */ }
+  }));
   $('#month').addEventListener('change', (e) => { state.month = e.target.value; render(); });
   $('#cmp-a').addEventListener('change', (e) => { state.a = e.target.value; state.b = null; render(); });
   $('#cmp-b').addEventListener('change', (e) => { state.b = e.target.value; state.bAuto = null; render(); });
