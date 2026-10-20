@@ -29,7 +29,9 @@
         const row = el('div');
         if (c) { const s = el('i', 'sw'); s.style.background = c; row.append(s); }
         if (val === '') { row.className = 'tip-d'; row.textContent = name; tipEl.append(row); continue; }
-        row.append(document.createTextNode(name), el('b', null, val));
+        const vb = el('b', null, val);
+        if (/^\s*▲/.test(val)) vb.className = 'up'; else if (/^\s*▼/.test(val)) vb.className = 'down';
+        row.append(document.createTextNode(name), vb);
         tipEl.append(row);
       }
       tipEl.hidden = false;
