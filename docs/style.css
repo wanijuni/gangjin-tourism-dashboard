@@ -64,7 +64,10 @@ select, button { font: inherit; }
 .take { font-size: 16px; line-height: 1.7; margin: 0 0 20px; max-width: 60rem; }
 .take b { font-weight: 700; }
 
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 12px; margin-bottom: 32px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 12px; margin-bottom: 8px; }
+.kpi-note { margin: 0 0 32px; font-size: 12.5px; color: var(--muted); }
+.kpi-note:empty { margin-bottom: 24px; }
+abbr.yeon { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
 .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; }
 .kpi-l { font-size: 13px; color: var(--muted); }
 .kpi-v { font-size: 28px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }

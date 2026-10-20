@@ -455,6 +455,7 @@
     });
     $$('[data-d]').forEach((e) => (row ? deltaText(e, row[e.dataset.d], e.dataset.d === 'share_pp') : e.replaceChildren()));
 
+    $('#kpi-note').textContent = row ? `※ 연인원: ${mLabel(M)} 한 달(${row.days}일) 동안 날마다 센 방문자를 모두 더한 수입니다. 한 사람이 3일 머물면 3명으로 세므로, 실제로 다녀간 사람 수보다 많습니다.` : '';
     const tk = $('#takeaway'); tk.replaceChildren();
     const pk = D.peak.find((r) => r.month === M);
     const SUM = (window.SUMMARIES || {})[M];
