@@ -96,6 +96,7 @@ select, button { font: inherit; }
 .explain ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
 .explain li b { font-weight: 700; }
 .explain .ex-v { margin-left: 6px; font-weight: 600; color: var(--c1, inherit); }
+#ex-search-type .ex-v { color: var(--c2); }
 .explain .ex-d { display: block; color: var(--muted); }
 .explain .ex-src { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
 

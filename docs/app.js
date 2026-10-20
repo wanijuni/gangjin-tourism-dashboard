@@ -224,21 +224,35 @@
     '캠핑장/펜션': '캠프·펜션·별장·민박·여관',
     '기타숙박': '모텔·연수원·숙박예약',
   };
+  // 검색 유형 설명 (한국관광 데이터랩 '지역별 검색건수' 데이터 설명, 티맵 목적지 유형 분류 기준)
+  const SRCH = {
+    '음식': '한식·중식·일식·분식·뷔페·전문음식점 등 음식점과 커피전문점·제과점·전통찻집 등 카페',
+    '자연관광': '산·섬·해수욕장·포구·항구·방파제·호수·저수지·하천·자연휴양림·국/도립공원 등',
+    '역사관광': '절·문화유적지·고택/생가/민속마을·성·정자·능묘·기념비·탑 등',
+    '체험관광': '공방/공예·체험농가·관광농원·온천',
+    '문화관광': '박물관/기념관·미술관·공연장·공원·전망대·축제·테마파크·촬영지·관광단지 등',
+    '레저스포츠': '골프장·낚시·수상해양스포츠·승마장·수련장·사격장·경륜/경마장·스키장 등',
+    '쇼핑': '재래시장·농수축산물시장·특산물단지·쇼핑센터·면세점 등',
+    '숙박': '호텔·콘도/리조트·펜션·모텔/여관·민박·게스트하우스·캠프장 등',
+    '기타관광': '버스터미널·기차역·선착장·관광안내소·드라이브코스·데이트코스·관광명소기타 등',
+  };
   // 상위 3개 항목 설명 목록
-  function explainTop(box, rows, fmtV) {
+  const EX_SPEND = { defs: IND, head: '상위 3개 업종은 무엇을 뜻하나요?', src: '출처: 한국관광 데이터랩 데이터 설명(신한카드 신용카드 결제 기준). 현금·간편결제·지역상품권은 포함되지 않습니다.' };
+  const EX_SEARCH = { defs: SRCH, head: '상위 3개 검색 유형은 무엇을 뜻하나요?', src: '출처: 한국관광 데이터랩 데이터 설명(티맵 내비게이션에서 목적지를 검색하고 실제로 100m·1분 이상 이동한 건수). 출퇴근 등 일상 이동도 섞여 있을 수 있습니다.' };
+  function explainTop(box, rows, fmtV, X = EX_SPEND) {
     if (!box) return;
     box.replaceChildren();
     const tot = d3.sum(rows, (r) => r.value);
     const top = rows.filter((r) => r.value > 0).slice(0, 3);
     if (!top.length) return;
-    box.append(el('div', 'ex-h', '상위 3개 업종은 무엇을 뜻하나요?'));
+    box.append(el('div', 'ex-h', X.head));
     const ol = el('ol');
     top.forEach((r) => {
       const li = el('li');
-      li.append(el('b', null, r.label), el('span', 'ex-v', fmtV(r, tot)), el('span', 'ex-d', IND[r.label] || '데이터랩 분류 기준'));
+      li.append(el('b', null, r.label), el('span', 'ex-v', fmtV(r, tot)), el('span', 'ex-d', X.defs[r.label] || '데이터랩 분류 기준'));
       ol.append(li);
     });
-    box.append(ol, el('div', 'ex-src', '출처: 한국관광 데이터랩 데이터 설명(신한카드 신용카드 결제 기준). 현금·간편결제·지역상품권은 포함되지 않습니다.'));
+    box.append(ol, el('div', 'ex-src', X.src));
   }
 
   function hbars(box, rows, o) {
@@ -256,7 +270,7 @@
       .attr('width', (d) => Math.max(d.value > 0 ? 2 : 0, x(d.value))).style('fill', (d, i) => (o.color ? o.color(d, i) : C0));
     gs.append('text').attr('x', (d) => left + x(d.value) + 6).attr('y', rowH / 2).attr('dy', '0.32em').text((d) => o.fmt(d.value));
     gs.append('rect').attr('width', W).attr('height', rowH).style('fill', 'transparent')
-      .on('mousemove', (ev, d) => { gs.selectAll('rect.bar').attr('opacity', (e) => (e === d ? 1 : 0.5)); tip.show(ev, d.label, [[null, o.name, o.fmt(d.value)]].concat(o.defs && IND[d.label] ? [[null, IND[d.label], '']] : [])); })
+      .on('mousemove', (ev, d) => { gs.selectAll('rect.bar').attr('opacity', (e) => (e === d ? 1 : 0.5)); tip.show(ev, d.label, [[null, o.name, o.fmt(d.value)]].concat(o.defs && (o.defs === true ? IND : o.defs)[d.label] ? [[null, (o.defs === true ? IND : o.defs)[d.label], '']] : [])); })
       .on('mouseleave', () => { gs.selectAll('rect.bar').attr('opacity', 1); tip.hide(); });
   }
 
@@ -451,7 +465,9 @@
     hbars($('#ch-spend-cat'), catRows, { name: '소비액', fmt: (v) => fmt(v) + '백만원', color: () => C1, defs: true });
     explainTop($('#ex-spend-cat'), catRows, (r, tot) => fmt(r.value) + '백만원 · ' + (tot ? Math.round((r.value / tot) * 1000) / 10 : 0) + '%');
     const types = of('search_type', M).sort((a, b) => b.n - a.n);
-    hbars($('#ch-search-type'), types.map((r) => ({ label: r.type, value: r.n })), { name: '검색건수', fmt: (v) => fmt(v) + '건', color: () => C2 });
+    const typeRows = types.map((r) => ({ label: r.type, value: r.n }));
+    hbars($('#ch-search-type'), typeRows, { name: '검색건수', fmt: (v) => fmt(v) + '건', color: () => C2, defs: SRCH });
+    explainTop($('#ex-search-type'), typeRows, (r, tot) => fmt(r.value) + '건 · ' + (tot ? Math.round((r.value / tot) * 1000) / 10 : 0) + '%', EX_SEARCH);
     heat($('#ch-search-area'), of('search_area', M), types.map((r) => r.type));
 
     const tb = $('#tbl-origin tbody'); tb.replaceChildren();
