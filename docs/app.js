@@ -255,6 +255,27 @@
     box.append(ol, el('div', 'ex-src', X.src));
   }
 
+  // 기간 비교용: 기준 기간 상위 3개 설명 + 비교 기간 대비 증감
+  function explainTop2(box, rows, X, unit, la, lb) {
+    if (!box) return;
+    box.replaceChildren();
+    const top = rows.filter((r) => (r.a || 0) > 0).sort((p, q) => q.a - p.a).slice(0, 3);
+    if (!top.length) return;
+    box.append(el('div', 'ex-h', X.head.replace('상위 3개', `기준(${la}) 상위 3개`)));
+    const ol = el('ol');
+    top.forEach((r) => {
+      const li = el('li');
+      li.append(el('b', null, r.label), el('span', 'ex-v', fmt(r.a) + unit));
+      if (r.b != null && r.b > 0) {
+        const c = Math.round(((r.a - r.b) / r.b) * 1000) / 10;
+        li.append(el('span', 'ex-c', ` · 비교 ${fmt(r.b)}${unit} `), el('span', c > 0 ? 'up' : c < 0 ? 'down' : null, c === 0 ? '거의 같음' : tri(c) + Math.abs(c) + '%'));
+      } else if (r.b === 0 || r.b == null) li.append(el('span', 'ex-c', ' · 비교 기간 자료 없음'));
+      li.append(el('span', 'ex-d', X.defs[r.label] || '데이터랩 분류 기준'));
+      ol.append(li);
+    });
+    box.append(ol, el('div', 'ex-src', X.src));
+  }
+
   function hbars(box, rows, o) {
     box.replaceChildren();
     if (!rows.length) return noData(box);
@@ -292,7 +313,7 @@
         .text((d) => (d[k] == null ? '없음' : o.fmt(d[k])));
     });
     gs.append('rect').attr('width', W).attr('height', rowH).style('fill', 'transparent')
-      .on('mousemove', (ev, d) => tip.show(ev, d.label, [[C0, o.la, d.a == null ? '없음' : o.fmt(d.a)], [CM, o.lb, d.b == null ? '없음' : o.fmt(d.b)]]))
+      .on('mousemove', (ev, d) => tip.show(ev, d.label, [[C0, o.la, d.a == null ? '없음' : o.fmt(d.a)], [CM, o.lb, d.b == null ? '없음' : o.fmt(d.b)]].concat(o.defs && o.defs[d.label] ? [[null, o.defs[d.label], '']] : [])))
       .on('mouseleave', () => tip.hide());
   }
 
@@ -835,9 +856,13 @@
     $('#cmp-map-note').textContent = '색은 기준 기간의 방문자 수, ▲▼는 비교 기간 대비 증감률입니다. 읍면에 올리면 두 기간 수치가 보입니다.'
       + (ar.partial || br.partial ? ' 달의 일부만 포함된 기간은 월 자료를 일수 비율로 나눈 추정치입니다.' : '')
       + (ar.missing || br.missing ? ' 일부 달은 읍면 자료가 없어 빠졌습니다.' : '');
-    hbars2($('#ch-cmp-cat'), pairMaps(sumCols(D.daily_cat, PA), sumCols(D.daily_cat, PBx), (v) => Math.round(v / 1000)), { la, lb, fmt: (v) => fmt(v) });
+    const catPairs = pairMaps(sumCols(D.daily_cat, PA), sumCols(D.daily_cat, PBx), (v) => Math.round(v / 1000));
+    hbars2($('#ch-cmp-cat'), catPairs, { la, lb, fmt: (v) => fmt(v), defs: IND });
+    explainTop2($('#ex-cmp-cat'), catPairs, EX_SPEND, '백만원', la, lb);
     hbars2($('#ch-cmp-sido'), pairMaps(sidoWeighted(A), sidoWeighted(B), (v) => v), { la, lb, fmt: (v) => v + '%' });
-    hbars2($('#ch-cmp-type'), pairMaps(sumCols(D.daily_type, PA), sumCols(D.daily_type, PBx), (v) => v), { la, lb, fmt: (v) => fmt(v) });
+    const typePairs = pairMaps(sumCols(D.daily_type, PA), sumCols(D.daily_type, PBx), (v) => v);
+    hbars2($('#ch-cmp-type'), typePairs, { la, lb, fmt: (v) => fmt(v), defs: SRCH });
+    explainTop2($('#ex-cmp-type'), typePairs, EX_SEARCH, '건', la, lb);
   }
 
   // ---------- footer ----------

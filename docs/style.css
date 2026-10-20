@@ -97,6 +97,8 @@ select, button { font: inherit; }
 .explain li b { font-weight: 700; }
 .explain .ex-v { margin-left: 6px; font-weight: 600; color: var(--c1, inherit); }
 #ex-search-type .ex-v { color: var(--c2); }
+#ex-cmp-cat .ex-v, #ex-cmp-type .ex-v { color: var(--c0); }
+.explain .ex-c { color: var(--muted); }
 .explain .ex-d { display: block; color: var(--muted); }
 .explain .ex-src { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
 
