@@ -46,14 +46,13 @@ body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--fo
 .head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; margin-bottom: 12px; }
 .title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
 .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
-.title-row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 6px 16px; }
-.friends { display: flex; align-items: flex-end; margin-bottom: -2px; }
-.friends img { display: block; width: auto; margin-right: 2px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.12)); transform-origin: 50% 100%; animation: friend-in .5s cubic-bezier(.3,1.5,.6,1) both; animation-delay: calc(var(--i) * 70ms); }
-.friends img:hover { animation: friend-hop .45s ease; }
+.title-row { display: flex; align-items: flex-end; gap: 10px; }
+.friend { display: block; width: auto; flex: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.12)); transform-origin: 50% 100%; animation: friend-in .5s cubic-bezier(.3,1.5,.6,1) both; animation-delay: calc(var(--i) * 90ms); }
+.friend:hover { animation: friend-hop .45s ease; }
 @keyframes friend-in { from { opacity: 0; transform: translateY(10px) scale(.85); } to { opacity: 1; transform: none; } }
 @keyframes friend-hop { 0%,100% { transform: none; } 40% { transform: translateY(-8px) rotate(-4deg); } 70% { transform: translateY(0) rotate(2deg); } }
-@media (prefers-reduced-motion: reduce) { .friends img { animation: none !important; } }
-@media (max-width: 640px) { .friends img { height: 40px; } .friends img:nth-child(n+5) { height: 30px; } }
+@media (prefers-reduced-motion: reduce) { .friend { animation: none !important; } }
+@media (max-width: 640px) { .title-row { gap: 6px; } .friend { height: 40px; } }
 .ctrl { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 select, button { font: inherit; }
 .ctrl select { color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 14px; }
