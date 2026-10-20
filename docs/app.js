@@ -857,7 +857,7 @@
       + (ar.partial || br.partial ? ' 달의 일부만 포함된 기간은 월 자료를 일수 비율로 나눈 추정치입니다.' : '')
       + (ar.missing || br.missing ? ' 일부 달은 읍면 자료가 없어 빠졌습니다.' : '');
     const catPairs = pairMaps(sumCols(D.daily_cat, PA), sumCols(D.daily_cat, PBx), (v) => Math.round(v / 1000));
-    hbars2($('#ch-cmp-cat'), catPairs, { la, lb, fmt: (v) => fmt(v), defs: IND });
+    hbars2($('#ch-cmp-cat'), catPairs.slice(0, 7), { la, lb, fmt: (v) => fmt(v), defs: IND });
     explainTop2($('#ex-cmp-cat'), catPairs, EX_SPEND, '백만원', la, lb);
     hbars2($('#ch-cmp-sido'), pairMaps(sidoWeighted(A), sidoWeighted(B), (v) => v), { la, lb, fmt: (v) => v + '%' });
     const typePairs = pairMaps(sumCols(D.daily_type, PA), sumCols(D.daily_type, PBx), (v) => v);
