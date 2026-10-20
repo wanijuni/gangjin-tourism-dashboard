@@ -154,6 +154,8 @@ td.num, th.num { text-align: right; }
 @media (prefers-color-scheme: dark) { :root { --day-sat: #7aa2f0; --day-sun: #f07a72; --day-hol: #f2ac4b; --day-nat: #b48af0; --day-pub: #4fc4b3; --day-sub: #f07ab4; --rest-bg: rgba(240, 122, 114, .08); } }
 .daylegend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; font-size: 12px; color: var(--muted); margin: 0 0 4px; min-height: 18px; }
 .daylegend .dl-h { color: var(--fg); font-weight: 600; }
+.daylegend .wx-h { margin-left: 10px; padding-left: 12px; border-left: 1px solid var(--line); }
+.wx-row text { font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif; }
 .dl-sw { display: inline-block; width: 12px; height: 5px; border-radius: 1.5px; margin-right: 5px; vertical-align: 2px; }
 @media (max-width: 640px) { .daylegend { justify-content: flex-start; } }
 .notice { align-items: flex-start; }

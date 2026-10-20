@@ -74,18 +74,60 @@
     box.append(lg);
   }
 
+  // ---------- 날씨 ----------
+  let WX = null; // { rows: { YYYYMMDD: [최고, 최저, 강수mm, 적설cm, 일조비율] } }
+  const WX_TYPES = [['맑음', '☀️'], ['구름많음', '⛅'], ['흐림', '☁️'], ['비', '🌧️'], ['눈', '❄️']];
+  const WX_ICON = Object.fromEntries(WX_TYPES);
+  function wxInfo(key) {
+    const r = WX && WX.rows[key];
+    if (!r) return null;
+    const [tx, tn, pr, sn, sun] = r;
+    let type;
+    if ((sn || 0) >= 0.5 || ((pr || 0) >= 1 && tx <= 2)) type = '눈';
+    else if ((pr || 0) >= 1) type = '비';
+    else if (sun == null || sun >= 0.7) type = '맑음';
+    else if (sun >= 0.4) type = '구름많음';
+    else type = '흐림';
+    return { type, icon: WX_ICON[type], tx, tn, pr: pr || 0, heavy: (pr || 0) >= 30 };
+  }
+  function wxText(key) {
+    const w = wxInfo(key);
+    if (!w) return '자료 없음';
+    const rain = w.pr >= 1 ? ` ${fmt(Math.round(w.pr))}mm` : '';
+    return `${w.icon} ${w.type}${rain} · ${Math.round(w.tx)}°/${Math.round(w.tn)}°`;
+  }
+  function wxLegend(box, keys) {
+    if (!WX) return;
+    const present = new Set(keys.map(wxInfo).filter(Boolean).map((w) => w.type));
+    if (!present.size) return;
+    const lg = box.querySelector('.daylegend') || box.appendChild(el('div', 'daylegend'));
+    lg.append(el('span', 'dl-h wx-h', '날씨'));
+    for (const [k, ic] of WX_TYPES) if (present.has(k)) lg.append(el('span', 'wx-it', `${ic} ${k}`));
+  }
+  // 날씨 아이콘 한 줄 (x 위치 함수, 날짜 키 함수, y)
+  function wxRow(svg, idx, xf, kf, yy, size) {
+    if (!WX) return;
+    svg.append('g').attr('class', 'wx-row').selectAll('text').data(idx.filter((i) => wxInfo(kf(i)))).join('text')
+      .attr('x', xf).attr('y', yy).attr('text-anchor', 'middle').attr('dy', '0.35em')
+      .style('font-size', size + 'px').text((i) => wxInfo(kf(i)).icon);
+  }
+
   // ---------- charts ----------
   function dailyBars(box, days, series, unit) {
     box.replaceChildren();
     if (!days.length) return noData(box);
     dayLegend(box, days.map((d) => d.key));
-    const W = Math.max(300, box.clientWidth), H = 240;
+    const W0 = Math.max(300, box.clientWidth);
+    const showWx = !!WX && days.some((d) => wxInfo(d.key)) && (W0 / days.length) >= 11;
+    if (showWx) wxLegend(box, days.map((d) => d.key));
+    const W = W0, H = showWx ? 262 : 240;
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     const totals = days.map((d) => d3.sum(d.vals));
     const y0 = d3.scaleLinear([0, d3.max(totals) || 1], [0, 1]).nice();
     const ticks = y0.ticks(4);
-    const m = { t: 40, r: 6, b: 30, l: textW(svg, ticks.map((v) => compact.format(v))) + 10 };
+    const m = { t: 40, r: 6, b: showWx ? 52 : 30, l: textW(svg, ticks.map((v) => compact.format(v))) + 10 };
     const x = d3.scaleBand(days.map((d) => d.key), [m.l, W - m.r]).paddingInner(0.25).paddingOuter(0.1);
+    if (showWx) wxRow(svg, days.map((d) => d.key), (k) => x(k) + x.bandwidth() / 2, (k) => k, H - m.b + 20, Math.min(13, Math.max(9, x.step() * 0.7)));
     const y = d3.scaleLinear(y0.domain(), [H - m.b, m.t]);
     const info = new Map(days.map((d) => [d.key, dayInfo(d.key)]));
     // 쉬는 날 배경과 축 아래 색 띠
@@ -145,6 +187,7 @@
           ? [...series.map((s, i) => [s.color, s.name, fmt(d.vals[i]) + unit]).reverse(), [null, '합계', fmt(d3.sum(d.vals)) + unit]]
           : [[null, series[0].name, fmt(d.vals[0]) + unit]];
         const i = info.get(d.key);
+        if (WX) lines.push([null, '날씨', wxText(d.key)]);
         tip.show(ev, d.full + (i && i.name ? ` · ${i.name}` : ''), lines);
       })
       .on('mouseleave', () => { g.selectAll('rect.bar').attr('opacity', 1); tip.hide(); });
@@ -523,18 +566,23 @@
     const n = Math.max(2, d3.max([...A, ...B], (d) => d.i));
     const daily = !o.monthly && o.startA && o.startB;
     const keyA = (i) => addDays(o.startA, i - 1), keyB = (i) => addDays(o.startB, i - 1);
-    if (daily) dayLegend(box, d3.range(1, n + 1).flatMap((i) => [keyA(i), keyB(i)]));
-    const W = Math.max(300, box.clientWidth), H = daily ? 278 : 240;
+    const allKeys = daily ? d3.range(1, n + 1).flatMap((i) => [keyA(i), keyB(i)]) : [];
+    if (daily) dayLegend(box, allKeys);
+    const W = Math.max(300, box.clientWidth);
+    const showWx = daily && !!WX && allKeys.some((k) => wxInfo(k)) && (W / n) >= 11;
+    if (showWx) wxLegend(box, allKeys);
+    const RH = showWx ? 30 : 17; // 기준·비교 줄 높이 (날씨가 있으면 아이콘 자리만큼 넓힘)
+    const H = daily ? 278 + (RH - 17) * 2 : 240;
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     const y0 = d3.scaleLinear([0, d3.max([...A, ...B], (d) => d.v) || 1], [0, 1]).nice();
     const ticks = y0.ticks(4);
-    const m = { t: 12, r: 14, b: daily ? 60 : 22, l: Math.max(textW(svg, ticks.map((v) => compact.format(v))), daily ? textW(svg, ['기준', '비교']) + 8 : 0) + 10 };
+    const m = { t: 12, r: 14, b: daily ? 60 + (RH - 17) * 2 : 22, l: Math.max(textW(svg, ticks.map((v) => compact.format(v))), daily ? textW(svg, ['기준', '비교']) + 8 : 0) + 10 };
     const x = d3.scaleLinear([1, n], [m.l, W - m.r]);
     const y = d3.scaleLinear(y0.domain(), [H - m.b, m.t]);
     if (daily) {
       // 기준·비교 기간 각각의 쉬는 날을 축 아래 두 줄 색 띠로 표시
       const cw = Math.max(2, Math.min(14, (x(2) - x(1)) * 0.75));
-      const rowsY = [[keyA, H - m.b + 12, '기준', C0], [keyB, H - m.b + 29, '비교', 'var(--muted)']];
+      const rowsY = [[keyA, H - m.b + 12, '기준', C0], [keyB, H - m.b + 12 + RH, '비교', 'var(--muted)']];
       // 기준 기간 쉬는 날은 배경도 옅게 칠함
       svg.append('g').selectAll('rect').data(d3.range(1, n + 1).filter((i) => dayInfo(keyA(i)))).join('rect')
         .attr('x', (i) => Math.max(m.l, x(i) - (x(2) - x(1)) / 2))
@@ -548,6 +596,7 @@
         svg.append('g').selectAll('rect').data(d3.range(1, n + 1).filter((i) => dayInfo(kf(i)))).join('rect')
           .attr('x', (i) => x(i) - cw / 2).attr('width', cw).attr('y', yy).attr('height', 5).attr('rx', 1.5)
           .style('fill', (i) => DAY_COLOR[dayInfo(kf(i)).type]);
+        if (showWx) wxRow(svg, d3.range(1, n + 1), (i) => x(i), kf, yy + 16, Math.min(13, Math.max(9, (x(2) - x(1)) * 0.7)));
       }
     }
     svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', m.l).attr('x2', W - m.r)
@@ -578,7 +627,8 @@
         dB.attr('cx', x(i)).attr('cy', b ? y(b.v) : 0).attr('visibility', b ? 'visible' : 'hidden');
         tip.show(ev, o.monthly ? `${i}번째 달` : `${i}일째`, [
           [C0, a ? a.label : o.la, a ? fmt(a.v) + o.unit : '자료 없음'],
-          [CM, b ? b.label : o.lb, b ? fmt(b.v) + o.unit : '자료 없음']]);
+          [CM, b ? b.label : o.lb, b ? fmt(b.v) + o.unit : '자료 없음']]
+          .concat(daily && WX ? [[null, '기준 날씨', wxText(keyA(i))], [null, '비교 날씨', wxText(keyB(i))]] : []));
       })
       .on('mouseleave', () => { rule.attr('visibility', 'hidden'); dA.attr('visibility', 'hidden'); dB.attr('visibility', 'hidden'); tip.hide(); });
   }
@@ -835,6 +885,7 @@
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (D) render(); });
 
   fetch('gangjin_emd.geojson').then((r) => (r.ok ? r.json() : null)).then((g) => { GEO = g; if (D) render(); }).catch(() => {});
+  fetch('data/weather.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).then((w) => { if (w && w.rows) { WX = w; if (D) render(); } }).catch(() => {});
   fetch('data/data.json', { cache: 'no-cache' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((data) => {

@@ -26,6 +26,8 @@ jobs:
           python-version: "3.12"
       - name: CSV 합치기
         run: python scripts/build_data.py
+      - name: 날씨 자료 받기 (Open-Meteo)
+        run: python scripts/fetch_weather.py
       - name: 화면 파일에 버전 붙이기 (브라우저가 예전 파일을 쓰지 않도록)
         run: |
           V="${GITHUB_SHA::8}"
