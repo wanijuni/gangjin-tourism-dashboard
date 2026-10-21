@@ -29,6 +29,11 @@ def main():
             d = json.load(r)["daily"]
     except Exception as e:  # noqa: BLE001
         print(f"::warning::날씨 자료를 받지 못했습니다: {e}")
+        cache = ROOT / "data" / "weather.json"
+        if cache.exists():
+            OUT.parent.mkdir(parents=True, exist_ok=True)
+            OUT.write_text(cache.read_text(encoding="utf-8"), encoding="utf-8")
+            print("저장소에 보관된 날씨 자료를 대신 씁니다.")
         return 0
 
     def r1(v):
