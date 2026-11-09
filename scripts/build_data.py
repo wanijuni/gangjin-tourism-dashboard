@@ -123,13 +123,17 @@ def main():
             if r["카테고리중분류명"] == "전체":
                 daily[r["기준년월"].strip()]["search"] = int(num(r["기초지자체 검색건수"]))
     daily_list = [{"date": d, "month": d[:6], **v} for d, v in sorted(daily.items())]
+    spend_months = set(get("spend_daily"))  # 소비 자료가 아직 없는 달은 0이 아니라 '자료 없음'(None)
+    for d in daily_list:
+        if d["month"] not in spend_months:
+            d["spend_k"] = None
 
     # ---- 월별 핵심 지표 ----
     acc = defaultdict(lambda: {"total": 0, "outsider": 0, "local": 0, "spend_k": 0, "search": 0, "days": 0})
     for d in daily_list:
         a = acc[d["month"]]
         for k in ("total", "outsider", "local", "spend_k", "search"):
-            a[k] += d[k]
+            a[k] += d[k] or 0
         a["days"] += 1
     months = sorted(m for m in acc if m in get("visitors_daily"))
 
@@ -145,10 +149,13 @@ def main():
         a = acc[m]
         share = r1(a["outsider"] / a["total"] * 100) if a["total"] else None
         row = {"month": m, **a, "spend_eok": r1(a["spend_k"] / 1e5), "outsider_share_pct": share}
+        has_sp = m in spend_months
+        if not has_sp:
+            row["spend_k"] = row["spend_eok"] = None
         for k, src in (("outsider_avg", "outsider"), ("total_avg", "total"), ("spend_avg_k", "spend_k"), ("search_avg", "search")):
-            row[k] = round(a[src] / a["days"]) if a["days"] else None
+            row[k] = round(a[src] / a["days"]) if a["days"] and not (src == "spend_k" and not has_sp) else None
         p = acc.get(prev_month(m)) if prev_month(m) in months else None
-        row["spend_mom"] = pct(a["spend_k"], p["spend_k"]) if p else None
+        row["spend_mom"] = pct(a["spend_k"], p["spend_k"]) if p and has_sp and prev_month(m) in spend_months else None
         row["outsider_mom"] = pct(a["outsider"], p["outsider"]) if p else None
         row["total_mom"] = pct(a["total"], p["total"]) if p else None
         row["search_mom"] = pct(a["search"], p["search"]) if p else None

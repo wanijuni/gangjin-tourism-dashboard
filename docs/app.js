@@ -454,6 +454,8 @@
       e.textContent = v == null ? '—' : ['spend_eok', 'outsider_share_pct'].includes(e.dataset.k) ? String(v) : fmt(v);
     });
     $$('[data-d]').forEach((e) => (row ? deltaText(e, row[e.dataset.d], e.dataset.d === 'share_pp') : e.replaceChildren()));
+    const noSpend = !!row && row.spend_eok == null; // 데이터랩 카드 소비 자료가 아직 공개되지 않은 달
+    if (noSpend) $('[data-d="spend_mom"]').textContent = '소비 자료 공개 전';
 
     $('#kpi-note').textContent = row ? `※ 연인원: ${mLabel(M)} 한 달(${row.days}일) 동안 날마다 센 방문자를 모두 더한 수입니다. 한 사람이 3일 머물면 3명으로 세므로, 실제로 다녀간 사람 수보다 많습니다.` : '';
     const tk = $('#takeaway'); tk.replaceChildren();
@@ -474,6 +476,9 @@
     const days = of('daily', M);
     dailyBars($('#ch-visit-daily'), days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.local, d.outsider] })),
       [{ name: '현지인', color: CM }, { name: '외지인', color: C0 }], '명');
+    if (noSpend) {
+      for (const id of ['#ch-spend-daily', '#ch-spend-major', '#ch-spend-cat']) $(id).replaceChildren(el('p', 'empty-note', `${mLabel(M)} 관광소비(신용카드) 자료는 아직 데이터랩에 공개되지 않았습니다. 공개되면 추가하겠습니다.`));
+    } else
     dailyBars($('#ch-spend-daily'), days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.spend_k] })),
       [{ name: '관광총소비', color: C1 }], '천원');
     dailyBars($('#ch-search-daily'), days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.search] })),
@@ -503,11 +508,11 @@
     });
     hbars($('#ch-origin-sido'), of('origin_sido', M).map((r) => ({ label: r.sido, value: r.pct })).sort(desc), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
     const majRows = of('industry_major', M).map((r) => ({ label: r.major, value: r.pct })).sort(desc);
-    hbars($('#ch-spend-major'), majRows, { name: '지출 비중', fmt: (v) => v + '%', color: () => C1, defs: true });
-    explainTop($('#ex-spend-major'), majRows, (r) => r.value + '%');
+    if (!noSpend) hbars($('#ch-spend-major'), majRows, { name: '지출 비중', fmt: (v) => v + '%', color: () => C1, defs: true });
+    explainTop($('#ex-spend-major'), noSpend ? [] : majRows, (r) => r.value + '%');
     const catRows = of('spend_cat', M).map((r) => ({ label: r.cat, value: r.mw })).sort(desc);
-    hbars($('#ch-spend-cat'), catRows, { name: '소비액', fmt: (v) => fmt(v) + '백만원', color: () => C1, defs: true });
-    explainTop($('#ex-spend-cat'), catRows, (r, tot) => fmt(r.value) + '백만원 · ' + (tot ? Math.round((r.value / tot) * 1000) / 10 : 0) + '%');
+    if (!noSpend) hbars($('#ch-spend-cat'), catRows, { name: '소비액', fmt: (v) => fmt(v) + '백만원', color: () => C1, defs: true });
+    explainTop($('#ex-spend-cat'), noSpend ? [] : catRows, (r, tot) => fmt(r.value) + '백만원 · ' + (tot ? Math.round((r.value / tot) * 1000) / 10 : 0) + '%');
     const types = of('search_type', M).sort((a, b) => b.n - a.n);
     const typeRows = types.map((r) => ({ label: r.type, value: r.n }));
     hbars($('#ch-search-type'), typeRows, { name: '검색건수', fmt: (v) => fmt(v) + '건', color: () => C2, defs: SRCH });
@@ -588,11 +593,12 @@
   function agg(p) {
     const days = daysIn(p), n = days.length;
     const t = { total: 0, outsider: 0, local: 0, spend_k: 0, search: 0 };
-    for (const d of days) for (const k in t) t[k] += d[k];
+    let spendMissing = false;
+    for (const d of days) for (const k in t) { if (d[k] == null) { if (k === 'spend_k') spendMissing = true; continue; } t[k] += d[k]; }
     const avg = (v) => (n ? Math.round(v / n) : null);
     return {
       days, n, cal: spanDays(p.start, p.end),
-      spend_eok: n ? Math.round(t.spend_k / 1e4) / 10 : null, spend_avg_k: avg(t.spend_k),
+      spend_eok: n && !spendMissing ? Math.round(t.spend_k / 1e4) / 10 : null, spend_avg_k: spendMissing ? null : avg(t.spend_k), spendMissing,
       outsider: n ? t.outsider : null, outsider_avg: avg(t.outsider), local: n ? t.local : null, total: n ? t.total : null,
       outsider_share_pct: t.total ? Math.round((t.outsider / t.total) * 1000) / 10 : null,
       search: n ? t.search : null, search_avg: avg(t.search),
@@ -619,7 +625,7 @@
     const wd = (k) => { const i = dayInfo(k); const w = '일월화수목금토'[toDate(k).getUTCDay()]; return ` (${w}${i && i.name ? ' · ' + i.name : ''})`; };
     if (!monthly) return a.days.map((d) => ({ i: spanDays(p.start, d.date), v: d[state.metric], label: dot(d.date) + wd(d.date) }));
     const g = d3.groups(a.days, (d) => d.month);
-    return g.map(([m, ds], idx) => ({ i: idx + 1, v: d3.sum(ds, (d) => d[state.metric]), label: `${m.slice(0, 4)}.${m.slice(4)}` + (ds.length < lastDay(+m.slice(0, 4), +m.slice(4)) ? ` (${ds.length}일)` : '') }));
+    return g.map(([m, ds], idx) => ({ i: idx + 1, v: ds.some((d) => d[state.metric] == null) ? null : d3.sum(ds, (d) => d[state.metric]), label: `${m.slice(0, 4)}.${m.slice(4)}` + (ds.length < lastDay(+m.slice(0, 4), +m.slice(4)) ? ` (${ds.length}일)` : '') }));
   }
 
   function lines2(box, A, B, o) {
@@ -880,8 +886,13 @@
       + (ar.partial || br.partial ? ' 달의 일부만 포함된 기간은 월 자료를 일수 비율로 나눈 추정치입니다.' : '')
       + (ar.missing || br.missing ? ' 일부 달은 읍면 자료가 없어 빠졌습니다.' : '');
     const catPairs = pairMaps(sumCols(D.daily_cat, PA), sumCols(D.daily_cat, PBx), (v) => Math.round(v / 1000));
-    hbars2($('#ch-cmp-cat'), catPairs.slice(0, 7), { la, lb, fmt: (v) => fmt(v), defs: IND });
-    explainTop2($('#ex-cmp-cat'), catPairs, EX_SPEND, '백만원', la, lb);
+    if (A.spendMissing || B.spendMissing) {
+      $('#ch-cmp-cat').replaceChildren(el('p', 'empty-note', `${A.spendMissing ? la : lb} 기간에 관광소비(신용카드) 자료가 아직 공개되지 않은 달이 있어 업종 비교를 할 수 없습니다.`));
+      $('#ex-cmp-cat').replaceChildren();
+    } else {
+      hbars2($('#ch-cmp-cat'), catPairs.slice(0, 7), { la, lb, fmt: (v) => fmt(v), defs: IND });
+      explainTop2($('#ex-cmp-cat'), catPairs, EX_SPEND, '백만원', la, lb);
+    }
     hbars2($('#ch-cmp-sido'), pairMaps(sidoWeighted(A), sidoWeighted(B), (v) => v), { la, lb, fmt: (v) => v + '%' });
     const typePairs = pairMaps(sumCols(D.daily_type, PA), sumCols(D.daily_type, PBx), (v) => v);
     hbars2($('#ch-cmp-type'), typePairs, { la, lb, fmt: (v) => fmt(v), defs: SRCH });

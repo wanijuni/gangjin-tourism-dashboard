@@ -238,3 +238,5 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .map-side td.rk { color: var(--muted); width: 1.5em; }
 .map-side td.metric { font-weight: 700; }
 .map-side td.muted { color: var(--muted); }
+
+.empty-note { margin: 0; padding: 28px 12px; text-align: center; color: var(--muted); font-size: 13.5px; background: color-mix(in srgb, var(--fg) 3%, transparent); border-radius: 10px; }
