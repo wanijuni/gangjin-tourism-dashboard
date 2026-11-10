@@ -969,7 +969,10 @@
     const RH = showWx ? 30 : 17; // 기준·비교 줄 높이 (날씨가 있으면 아이콘 자리만큼 넓힘)
     const H = daily ? 278 + (RH - 17) * 2 : 240;
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
-    const y0 = d3.scaleLinear([0, d3.max([...A, ...B], (d) => d.v) || 1], [0, 1]).nice();
+    // Y축을 0부터가 아니라 값이 있는 구간만 보여 줘서 두 기간의 차이가 잘 보이게 함
+    const vs = [...A, ...B].map((d) => d.v).filter((v) => v != null && isFinite(v));
+    const lo = d3.min(vs) || 0, hi = d3.max(vs) || 1, pad = Math.max((hi - lo) * 0.25, hi * 0.03);
+    const y0 = d3.scaleLinear([Math.max(0, lo - pad), hi + pad * 0.6], [0, 1]).nice(5);
     const ticks = y0.ticks(4);
     const m = { t: 12, r: 14, b: daily ? 60 + (RH - 17) * 2 : 22, l: Math.max(textW(svg, ticks.map((v) => compact.format(v))), daily ? textW(svg, ['기준', '비교']) + 8 : 0) + 10 };
     const x = d3.scaleLinear([1, n], [m.l, W - m.r]);
