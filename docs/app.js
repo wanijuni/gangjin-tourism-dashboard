@@ -689,11 +689,11 @@
       const v = el('div', 'ps-v'); v.append(document.createTextNode(val), el('small', null, unit));
       const d = el('div', 'ps-d');
       if (note) d.append(el('span', 'muted', note));
-      else { d.append('전월 ', dl(mom, pp)); if (!pp) d.append('  전년 ', dl(y)); }
+      else { d.append('전월 ', dl(mom, pp)); if (y !== undefined) d.append('  전년 ', dl(y, pp)); }
       c.append(el('div', 'ps-l', label), v, d); kp.append(c);
     };
     card('외지인 방문자', fmt(row.outsider), '명', row.outsider_mom, yoy('outsider'));
-    card('외지인 비중', String(row.outsider_share_pct), '%', row.share_pp, null, true);
+    card('외지인 비중', String(row.outsider_share_pct), '%', row.share_pp, ly && ly.outsider_share_pct != null ? Math.round((row.outsider_share_pct - ly.outsider_share_pct) * 10) / 10 : null, true);
     card('전체 방문자', fmt(row.total), '명', row.total_mom, yoy('total'));
     card('관광소비', row.spend_eok == null ? '—' : String(row.spend_eok), row.spend_eok == null ? '' : '억원', row.spend_mom, yoy('spend_k'), false, row.spend_eok == null ? '데이터랩 공개 전' : null);
     card('관광 검색', fmt(row.search), '건', row.search_mom, yoy('search'));
