@@ -247,3 +247,37 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .btn-report:hover { filter: brightness(1.08); }
 .btn-report:disabled { opacity: .6; cursor: progress; }
 .btn-report:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+/* ---------- 한장요약 PDF (A4 794px 폭, 항상 밝은 화면으로) ---------- */
+.pdf-host { position: fixed; left: -10000px; top: 0; width: 794px; z-index: -1; }
+.pdf-host.show { left: 0; z-index: 9999; background: #888; padding: 10px; }
+.pdf-sheet { --bg: #ffffff; --panel: #ffffff; --fg: #1f2328; --muted: #6a6f76; --line: #e3e1dc; --grid: #ecebe7; --axis: #c9c6bf; --c0: #2b6cb0; --c1: #c2622d; --c2: #3f8a5a; --cm: #c4c9d0; --up: #e8000b; --down: #0050e6;
+  color-scheme: light; width: 794px; min-height: 1123px; box-sizing: border-box; padding: 30px 34px 24px; background: #fff; color: var(--fg); font-family: var(--font); font-size: 12px; display: flex; flex-direction: column; gap: 12px; }
+.pdf-sheet .ps-head { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; border-bottom: 3px solid var(--c0); }
+.pdf-sheet .ps-pals { display: flex; align-items: flex-end; }
+.pdf-sheet .ps-pals img { height: 46px; width: auto; }
+.pdf-sheet .ps-head > div:nth-child(2) { flex: 1; min-width: 0; }
+.pdf-sheet .ps-eyebrow { font-size: 11px; color: var(--muted); font-weight: 600; }
+.pdf-sheet .ps-title { margin: 2px 0 0; font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+.pdf-sheet .ps-meta { text-align: right; font-size: 10.5px; color: var(--muted); line-height: 1.5; }
+.pdf-sheet .ps-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.pdf-sheet .ps-kpi { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.pdf-sheet .ps-l { font-size: 11px; color: var(--muted); font-weight: 600; }
+.pdf-sheet .ps-v { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.pdf-sheet .ps-chart .tick-l { font-size: 9.5px; }
+.pdf-sheet .ps-v small { font-size: 11px; font-weight: 600; margin-left: 2px; color: var(--muted); }
+.pdf-sheet .ps-d { font-size: 10.5px; margin-top: 2px; white-space: nowrap; color: var(--muted); }
+.pdf-sheet .ps-d .up, .pdf-sheet .ps-sum .up { color: var(--up); font-weight: 700; }
+.pdf-sheet .ps-d .down, .pdf-sheet .ps-sum .down { color: var(--down); font-weight: 700; }
+.pdf-sheet .ps-sum { background: #eef4fa; border-left: 4px solid var(--c0); border-radius: 6px; padding: 8px 12px; }
+.pdf-sheet .ps-sum ol { margin: 4px 0 0; padding: 0; list-style: none; line-height: 1.55; font-size: 12px; display: grid; gap: 2px; }
+.pdf-sheet .ps-sum li { display: flex; gap: 6px; }
+.pdf-sheet .ps-num { color: var(--c0); flex: none; }
+.pdf-sheet svg text { font-family: 'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',sans-serif; }
+.pdf-sheet .ps-h { font-size: 13px; font-weight: 800; }
+.pdf-sheet .ps-n { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.pdf-sheet .ps-box { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px 6px; min-width: 0; }
+.pdf-sheet .ps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pdf-sheet .ps-chart { margin-top: 4px; }
+.pdf-sheet .ps-chart .daylegend { font-size: 10px; margin-bottom: 2px; }
+.pdf-sheet .ps-foot { margin-top: auto; font-size: 10px; color: var(--muted); line-height: 1.6; border-top: 1px solid var(--line); padding-top: 6px; }

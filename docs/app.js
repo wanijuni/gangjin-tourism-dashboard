@@ -624,6 +624,138 @@
     btn.textContent = old;
   }
 
+  // ---------- 한장요약 (PDF) ----------
+  // 그래프 속 글자는 그림으로 옮기면 웹글꼴을 못 쓰므로, 처음부터 PC 기본 글꼴로 재고 그림
+  const PDF_FONT = "'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',sans-serif";
+  const loadScript = (src) => new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = () => bad(new Error(src)); document.head.append(sc); });
+  // SVG를 그림으로 옮길 때 CSS(변수·클래스)가 빠지지 않도록 계산된 색·글꼴을 속성으로 박아 둠
+  function inlineSvgStyles(root) {
+    root.querySelectorAll('svg, svg *').forEach((n) => {
+      const cs = getComputedStyle(n);
+      for (const k of ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'fill-opacity', 'stroke-opacity', 'font-size', 'font-weight', 'paint-order', 'stroke-linejoin']) {
+        const v = cs.getPropertyValue(k);
+        if (v && v !== 'normal') n.style.setProperty(k, v);
+      }
+      if (n.tagName === 'text' || n.tagName === 'tspan') n.style.setProperty('font-family', PDF_FONT);
+    });
+  }
+  function trendBars(box, M) {
+    box.replaceChildren();
+    const i = D.monthly.findIndex((r) => r.month === M);
+    const rows = D.monthly.slice(Math.max(0, i - 12), i + 1);
+    const W = Math.max(260, box.clientWidth), H = 190, m = { t: 22, r: 6, b: 22, l: 6 };
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const x = d3.scaleBand(rows.map((r) => r.month), [m.l, W - m.r]).padding(0.22);
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => r.outsider) * 1.15], [H - m.b, m.t]);
+    svg.append('g').selectAll('rect').data(rows).join('rect')
+      .attr('x', (r) => x(r.month)).attr('width', x.bandwidth()).attr('y', (r) => y(r.outsider)).attr('height', (r) => y(0) - y(r.outsider)).attr('rx', 2)
+      .style('fill', (r) => (r.month === M ? C0 : r.month === String(+M.slice(0, 4) - 1) + M.slice(4) ? 'var(--c1)' : CM));
+    svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick-l')
+      .attr('x', (r) => x(r.month) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').style('font-size', '10px').style('fill', 'var(--muted)')
+      .text((r) => (r.month.slice(4) === '01' ? `'${r.month.slice(2, 4)}.1` : `${+r.month.slice(4)}월`));
+    const lab = rows.filter((r, k) => r.month === M || k === 0 || r.month === String(+M.slice(0, 4) - 1) + M.slice(4));
+    svg.append('g').selectAll('text').data(lab).join('text')
+      .attr('x', (r) => x(r.month) + x.bandwidth() / 2).attr('y', (r) => y(r.outsider) - 5).attr('text-anchor', 'middle')
+      .style('font-size', '10.5px').style('font-weight', 700).style('fill', (r) => (r.month === M ? C0 : 'var(--muted)'))
+      .text((r) => (Math.round(r.outsider / 1000) / 10) + '만');
+  }
+  function buildSheet(M) {
+    const row = D.monthly.find((r) => r.month === M);
+    const ly = D.monthly.find((r) => r.month === String(+M.slice(0, 4) - 1) + M.slice(4));
+    const yoy = (k) => (ly && row[k] != null && ly[k] ? Math.round((row[k] / ly[k] - 1) * 1000) / 10 : null);
+    const sheet = el('div', 'pdf-sheet');
+    const dl = (v, pp) => (v == null ? el('span', 'muted', '—') : el('span', v > 0 ? 'up' : v < 0 ? 'down' : null, (v > 0 ? '▲' : v < 0 ? '▼' : '') + Math.abs(v) + (pp ? '%p' : '%')));
+    // 머리
+    const hd = el('div', 'ps-head');
+    const ttl = el('div');
+    ttl.append(el('div', 'ps-eyebrow', '전남광주통합특별시 강진군 · 관광 데이터 한장요약'), el('h1', 'ps-title', `${mLabel(M)} 강진군 관광 동향`));
+    const meta = el('div', 'ps-meta');
+    meta.append(el('div', null, `작성 ${reportDate().replace(/^'/, '20')}`), el('div', null, '한국관광공사 데이터랩 기반'));
+    const pals = el('div', 'ps-pals');
+    for (const n of ['otter-boy', 'otter-girl']) { const im = el('img'); im.src = `img/${n}.webp`; im.alt = ''; pals.append(im); }
+    hd.append(pals, ttl, meta);
+    sheet.append(hd);
+    // 핵심 지표 카드
+    const kp = el('div', 'ps-kpis');
+    const card = (label, val, unit, mom, y, pp, note) => {
+      const c = el('div', 'ps-kpi');
+      const v = el('div', 'ps-v'); v.append(document.createTextNode(val), el('small', null, unit));
+      const d = el('div', 'ps-d');
+      if (note) d.append(el('span', 'muted', note));
+      else { d.append('전월 ', dl(mom, pp)); if (!pp) d.append('  전년 ', dl(y)); }
+      c.append(el('div', 'ps-l', label), v, d); kp.append(c);
+    };
+    card('외지인 방문자', fmt(row.outsider), '명', row.outsider_mom, yoy('outsider'));
+    card('외지인 비중', String(row.outsider_share_pct), '%', row.share_pp, null, true);
+    card('전체 방문자', fmt(row.total), '명', row.total_mom, yoy('total'));
+    card('관광소비', row.spend_eok == null ? '—' : String(row.spend_eok), row.spend_eok == null ? '' : '억원', row.spend_mom, yoy('spend_k'), false, row.spend_eok == null ? '데이터랩 공개 전' : null);
+    card('관광 검색', fmt(row.search), '건', row.search_mom, yoy('search'));
+    sheet.append(kp);
+    // 요약
+    const sm = el('div', 'ps-sum');
+    sm.append(el('div', 'ps-h', (window.SUMMARIES || {})[M] ? '이달의 요약 (AI)' : '이달의 요약'));
+    const ol = el('ol');
+    summaryLines(M).forEach((t, k) => { const li = el('li'); li.append(el('b', 'ps-num', `${k + 1}.`)); const tx = el('span'); colorDelta(tx, t); li.append(tx); ol.append(li); });
+    sm.append(ol); sheet.append(sm);
+    // 그래프 칸
+    const box = (title, note, cls) => { const b = el('div', 'ps-box ' + (cls || '')); b.append(el('div', 'ps-h', title)); if (note) b.append(el('div', 'ps-n', note)); const c = el('div', 'ps-chart'); b.append(c); return [b, c]; };
+    const [b1, c1] = box('일별 방문자 수', '막대 = 현지인 + 외지인, 빨간 표시 = 외지인이 가장 많은 날', 'wide');
+    sheet.append(b1);
+    const g2 = el('div', 'ps-grid');
+    const [b2, c2] = box('최근 13개월 외지인 방문자', '파랑 = 이번 달, 주황 = 전년 같은 달 (연인원)');
+    const [b3, c3] = box('읍면별 방문자 수', '진할수록 방문자가 많음');
+    g2.append(b2, b3); sheet.append(g2);
+    const g3 = el('div', 'ps-grid');
+    const [b4, c4] = box('검색 유형 (상위 6)', '티맵 목적지 검색 건수');
+    const spendOk = row.spend_eok != null;
+    const [b5, c5] = spendOk ? box('소비 업종 (상위 6)', '신용카드 소비액, 백만원') : box('방문객 거주지 (상위 6)', '외지인 방문객의 거주 시군구 비율');
+    g3.append(b4, b5); sheet.append(g3);
+    const ft = el('div', 'ps-foot');
+    ft.append(el('div', null, '· 방문자 수는 연인원(날마다 센 방문자의 합)이며, 한 장소(지자체 내 기지국)에 30분 이상 머문 사람을 방문자로 셉니다.'),
+      el('div', null, '· 출처: 한국관광공사 데이터랩(이동통신·신한카드·티맵). 추정값이므로 변화 추이와 상대 비교 위주로 활용하세요.'));
+    sheet.append(ft);
+    return { sheet, draw() {
+      const days = of('daily', M);
+      dailyBars(c1, days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.local, d.outsider] })), [{ name: '현지인', color: CM }, { name: '외지인', color: C0 }], '명');
+      trendBars(c2, M);
+      choropleth(c3, of('visitors_by_area', M).map((r) => ({ label: r.area, value: r.visitors, pct: r.pct })), { short: (r) => (Math.round(r.value / 1000) / 10) + '만', lines: () => [] });
+      hbars(c4, of('search_type', M).sort((a, b) => b.n - a.n).slice(0, 6).map((r) => ({ label: r.type, value: r.n })), { name: '검색', fmt: (v) => fmt(v) + '건', color: () => C2 });
+      if (spendOk) hbars(c5, of('spend_cat', M).sort((a, b) => b.mw - a.mw).slice(0, 6).map((r) => ({ label: r.cat, value: r.mw })), { name: '소비', fmt: (v) => fmt(v), color: () => C1 });
+      else hbars(c5, of('origin', M).filter((r) => r.sgg).sort((a, b) => b.pct - a.pct).slice(0, 6).map((r) => ({ label: r.sgg, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
+    } };
+  }
+  async function makeOnePdf(M) {
+    const btn = $('#btn-report'), old = btn.textContent;
+    btn.disabled = true; btn.textContent = '만드는 중…';
+    const host = el('div', 'pdf-host');
+    document.body.append(host);
+    try {
+      if (!window.html2canvas) await loadScript('vendor/html2canvas.min.js');
+      if (!window.jspdf) await loadScript('vendor/jspdf.umd.min.js');
+      const { sheet, draw } = buildSheet(M);
+      host.append(sheet);
+      draw();
+      host.querySelectorAll('.wx-row, .wx-h, .wx-it').forEach((n) => n.remove()); // 날씨 아이콘은 PDF에서 뺌
+      inlineSvgStyles(sheet);
+      await document.fonts.ready;
+      const cv = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+      const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const PW = 210, PH = 297;
+      let w = PW, h = (cv.height / cv.width) * PW;
+      if (h > PH) { w = w * (PH / h); h = PH; } // 한 쪽을 넘으면 줄여서 한 쪽에 맞춤
+      pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', (PW - w) / 2, 0, w, h);
+      pdf.setProperties({ title: `강진군 관광 동향 ${mLabel(M)}` });
+      pdf.save(`강진군_관광동향_한장요약_${M}.pdf`);
+    } catch (e) {
+      console.error(e);
+      btn.textContent = '만들기 실패';
+      setTimeout(() => { btn.textContent = old; }, 2500);
+      return;
+    } finally { host.remove(); btn.disabled = false; }
+    btn.textContent = old;
+  }
+  window.__buildSheet = (M) => { const host = el('div', 'pdf-host show'); document.body.append(host); const r = buildSheet(M); host.append(r.sheet); r.draw(); return host; }; // 점검용
+
   function renderOverview() {
     const M = state.month;
     const row = D.monthly.find((r) => r.month === M);
@@ -1091,7 +1223,7 @@
   }
 
   window.__reportLayout = (M) => layoutReport(reportItems(M)); // 점검용
-  $('#btn-report').addEventListener('click', () => { if (state.month) makeOnePager(state.month); });
+  $('#btn-report').addEventListener('click', () => { if (state.month) makeOnePdf(state.month); });
   $$('.tab').forEach((b) => b.addEventListener('click', () => {
     const prev = state.tab;
     state.tab = b.dataset.tab; history.replaceState(null, '', '#' + state.tab); render();

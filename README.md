@@ -42,8 +42,8 @@
 출처: [vuski/admdongkor](https://github.com/vuski/admdongkor) 행정동 경계 ver20261001(행정안전부 행정동 경계 기반).
 
 
-## 한장요약(한글 보고서)
+## 한장요약(PDF)
 
-월간 현황의 기준월 옆 **한장요약** 버튼을 누르면 그 달의 요약이 한글 파일(`.hwpx`)로 내려받아집니다.
+월간 현황의 기준월 옆 **한장요약** 버튼을 누르면 그 달의 핵심 지표·요약·그래프가 A4 한 장짜리 PDF로 내려받아집니다(브라우저에서 바로 만듦: html2canvas, jsPDF).
 양식은 `report/보고서양식_원본.hwpx`(4차산업혁명활용추진단 보고서 양식)를 따릅니다.
 양식을 바꾸려면 원본 파일을 바꾼 뒤 `python scripts/make_report_template.py`를 실행해 `docs/report/`를 다시 만드세요.
