@@ -302,3 +302,5 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .chart g.r.top text { font-weight: 800; fill: var(--fg); }
 #tbl-origin tr.top td { font-weight: 800; color: var(--fg); }
 .pdf-sheet .chart text.peak-t, .pdf-sheet text.peak-t { fill: #ffffff; font-size: 13px; font-weight: 800; }
+.pdf-sheet .ps-ex { margin: 6px 0 0; padding: 6px 8px 4px 20px; background: #f6f5f1; border-radius: 6px; font-size: 10.5px; line-height: 1.55; color: var(--fg); }
+.pdf-sheet .ps-ex .up { color: var(--up); } .pdf-sheet .ps-ex .down { color: var(--down); }

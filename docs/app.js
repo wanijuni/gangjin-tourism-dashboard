@@ -739,7 +739,24 @@
       const days = of('daily', M);
       dailyBars(c1, days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.local, d.outsider] })), [{ name: '현지인', color: CM }, { name: '외지인', color: C0 }], '명');
       const pctRows = (rows, lab, v, n = 6) => { const tot = d3.sum(rows, (r) => r[v]) || 1; return rows.slice().sort((p, q) => q[v] - p[v]).slice(0, n).map((r) => ({ label: r[lab], value: Math.round((r[v] / tot) * 1000) / 10 })); };
-      if (spendOk) trendBars(c3, M);
+      if (spendOk) {
+        trendBars(c3, M);
+        // 그래프 아래 짧은 설명 (자동 계산)
+        const i = D.monthly.findIndex((r) => r.month === M);
+        const yr = D.monthly.slice(Math.max(0, i - 11), i + 1).filter((r) => r.spend_eok != null);
+        const lyR = D.monthly.find((r) => r.month === String(+M.slice(0, 4) - 1) + M.slice(4));
+        const ml = (m) => `${m.slice(0, 4) === M.slice(0, 4) ? '' : `'${m.slice(2, 4)}년 `}${+m.slice(4)}월`;
+        const ul = el('ul', 'ps-ex');
+        const add = (parts) => { const li = el('li'); for (const [t, c] of parts) li.append(c ? el('b', c, t) : document.createTextNode(t)); ul.append(li); };
+        if (lyR && lyR.spend_eok) { const c = Math.round((row.spend_eok / lyR.spend_eok - 1) * 1000) / 10; add([['이번 달 '], [row.spend_eok + '억원', null], ['은 전년 같은 달(' + lyR.spend_eok + '억원)보다 '], [Math.abs(c) + '%', c >= 0 ? 'up' : 'down'], [c >= 0 ? ' 많습니다.' : ' 적습니다.']]); }
+        if (yr.length >= 3) {
+          const hi = yr.reduce((a, b) => (b.spend_eok > a.spend_eok ? b : a)), lo = yr.reduce((a, b) => (b.spend_eok < a.spend_eok ? b : a));
+          const avg = Math.round((d3.mean(yr, (r) => r.spend_eok)) * 10) / 10;
+          add([[`최근 ${yr.length}개월 중 가장 많은 달은 ${ml(hi.month)}(${hi.spend_eok}억), 가장 적은 달은 ${ml(lo.month)}(${lo.spend_eok}억)입니다.`]]);
+          add([[`월평균은 ${avg}억원이며, 이번 달은 평균보다 `], [Math.abs(Math.round((row.spend_eok / avg - 1) * 1000) / 10) + '%', row.spend_eok >= avg ? 'up' : 'down'], [row.spend_eok >= avg ? ' 높습니다.' : ' 낮습니다.']]);
+        }
+        c3.append(ul);
+      }
       else hbars(c3, of('origin_sido', M).slice().sort((p, q) => q.pct - p.pct).slice(0, 6).map((r) => ({ label: r.sido, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
       if (spendOk) hbars(c4, of('industry_major', M).slice().sort((p, q) => q.pct - p.pct).slice(0, 5).map((r) => ({ label: r.major, value: r.pct })), { name: '비중', fmt: (v) => v + '%', color: () => C1 });
       else hbars(c4, of('origin', M).filter((r) => r.sgg).sort((p, q) => q.pct - p.pct).slice(0, 5).map((r) => ({ label: r.sgg, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
