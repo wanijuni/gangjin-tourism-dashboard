@@ -666,7 +666,7 @@
     const val = (r) => r.spend_eok;
     if (!rows.some((r) => val(r) != null)) return noData(box, '관광소비 자료가 없습니다');
     const LY = String(+M.slice(0, 4) - 1) + M.slice(4);
-    const W = Math.max(260, box.clientWidth), H = 190, m = { t: 22, r: 6, b: 22, l: 6 };
+    const W = Math.max(260, box.clientWidth), H = 190, m = { t: 22, r: 12, b: 22, l: 12 };
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     const x = d3.scaleBand(rows.map((r) => r.month), [m.l, W - m.r]).padding(0.22);
     const y = d3.scaleLinear([0, d3.max(rows, (r) => val(r) || 0) * 1.18], [H - m.b, m.t]);
@@ -680,11 +680,10 @@
       .attr('x', (r) => x(r.month) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').style('font-size', '10px').style('fill', 'var(--muted)')
       .text((r) => (r.month.slice(4) === '01' ? `'${r.month.slice(2, 4)}.1` : `${+r.month.slice(4)}월`));
     const lab = has.filter((r) => r.month === M || r.month === LY);
-    // 값 글자: 자기 막대 바로 위. 양 끝 막대는 바깥쪽으로 맞추고, 흰 테두리로 옆 막대와 겹쳐도 또렷하게
-    const idx = new Map(rows.map((r, k) => [r.month, k]));
+    // 값 글자: 자기 막대 가운데 바로 위. 흰 테두리로 옆 막대와 겹쳐도 또렷하게
     svg.append('g').selectAll('text').data(lab).join('text')
-      .attr('x', (r) => { const k = idx.get(r.month); return k === 0 ? x(r.month) - 2 : k === rows.length - 1 ? x(r.month) + x.bandwidth() + 2 : x(r.month) + x.bandwidth() / 2; })
-      .attr('y', (r) => y(val(r)) - 5).attr('text-anchor', (r) => { const k = idx.get(r.month); return k === 0 ? 'start' : k === rows.length - 1 ? 'end' : 'middle'; })
+      .attr('x', (r) => x(r.month) + x.bandwidth() / 2)
+      .attr('y', (r) => y(val(r)) - 5).attr('text-anchor', 'middle')
       .style('font-size', '10.5px').style('font-weight', 800).style('fill', (r) => (r.month === M ? C1 : C0))
       .style('paint-order', 'stroke').style('stroke', '#ffffff').style('stroke-width', '4px').style('stroke-linejoin', 'round')
       .text((r) => val(r) + '억');
