@@ -278,8 +278,9 @@
 
   // 요약 문장 속 증감 색칠: ▲·▼ 수치와 "N% 늘었/줄었" 같은 표현 (증가 빨강, 감소 파랑)
   const UPW = /^(늘|증가|많|높|올|상승)/, DNW = /^(줄|감소|적|낮|떨어|하락)/;
-  function colorDelta(li, t) {
+  function deltaSegs(t) {
     const re = /([▲▼])\s?\d[\d,]*(?:\.\d+)?(?:%p|%)?|\d[\d,]*(?:\.\d+)?%p?/g;
+    const out = [];
     let last = 0, mm;
     while ((mm = re.exec(t))) {
       let cls = null;
@@ -291,11 +292,15 @@
         if (w && !/중 가장|가장/.test(rest.slice(0, w.index))) cls = UPW.test(w[1]) ? 'up' : DNW.test(w[1]) ? 'down' : null;
       }
       if (!cls) continue;
-      if (mm.index > last) li.append(document.createTextNode(t.slice(last, mm.index)));
-      li.append(el('span', cls, mm[0]));
+      if (mm.index > last) out.push([t.slice(last, mm.index), null]);
+      out.push([mm[0], cls]);
       last = re.lastIndex;
     }
-    li.append(document.createTextNode(t.slice(last)));
+    if (last < t.length) out.push([t.slice(last), null]);
+    return out;
+  }
+  function colorDelta(li, t) {
+    for (const [x, c] of deltaSegs(t)) li.append(c ? el('span', c, x) : document.createTextNode(x));
   }
 
   function hbars(box, rows, o) {
@@ -446,6 +451,100 @@
     box.append(s, document.createTextNode(' 전월 대비'));
   }
 
+  // 이 달 요약 3줄 (AI 요약이 없으면 자동 문장)
+  function summaryLines(M) {
+    const SUM = (window.SUMMARIES || {})[M];
+    if (SUM) return SUM;
+    const row = D.monthly.find((r) => r.month === M), pk = D.peak.find((r) => r.month === M);
+    if (!row || !pk) return [];
+    return [`외지인 ${fmt(row.outsider)}명(전체 방문의 ${row.outsider_share_pct}%)이 찾았습니다.`,
+      `가장 붐빈 날은 ${pk.day_label}로 외지인 ${fmt(pk.outsider)}명이었습니다.`,
+      row.spend_eok == null ? `관광 검색은 ${fmt(row.search)}건입니다. 관광소비 자료는 아직 공개되지 않았습니다.` : `관광소비는 ${row.spend_eok}억원, 관광 검색은 ${fmt(row.search)}건입니다.`];
+  }
+
+  // ---------- 한장요약 (한글 hwpx) ----------
+  const xmlEsc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function reportDate(d = new Date()) {
+    const w = '일월화수목금토'[d.getDay()];
+    return `'${String(d.getFullYear()).slice(2)}. ${d.getMonth() + 1}. ${d.getDate()}.(${w})`;
+  }
+  const pctTxt = (v, pp) => (v == null ? null : (v > 0 ? '▲' : v < 0 ? '▼' : '') + Math.abs(v) + (pp ? '%p' : '%'));
+  function buildReportBody(M) {
+    const P = window.REPORT_PARTS;
+    const CH = { normal: P.normal, up: P.red, down: P.blue, note: P.note };
+    let pid = 9100000;
+    const run = (t, k = 'normal') => `<hp:run charPrIDRef="${CH[k]}"><hp:t>${xmlEsc(t)}</hp:t></hp:run>`;
+    const para = (segs) => P.line.replace('{{RUNS}}', segs.map(([t, k]) => run(t, k || 'normal')).join(''));
+    const colored = (t) => deltaSegs(t).map(([x, c]) => [x, c]);
+    const bullet = (label, text) => para([[` ○ ${label ? label + ' : ' : ''}`], ...colored(text)]);
+    const sub = (text) => para([['   - '], ...colored(text)]);
+    const note = (text) => para([[' ' + text, 'note']]);
+    const head = (num, h) => P.sec.replace('{{NUM}}', num).replace('{{HEAD}}', xmlEsc(h)).replace('{{PID}}', pid++).replace('{{TID}}', pid++);
+    const row = D.monthly.find((r) => r.month === M);
+    const ly = D.monthly.find((r) => r.month === String(+M.slice(0, 4) - 1) + M.slice(4));
+    const yoy = (k) => (ly && row[k] != null && ly[k] ? Math.round((row[k] / ly[k] - 1) * 1000) / 10 : null);
+    const both = (mom, y, pp) => { const a = [pctTxt(mom, pp) && `전월 대비 ${pctTxt(mom, pp)}`, pctTxt(y, pp) && `전년 동월 대비 ${pctTxt(y, pp)}`].filter(Boolean); return a.length ? ` (${a.join(', ')})` : ''; };
+    const out = [];
+    out.push(head('Ⅰ', `핵심 지표 (${mLabel(M)})`));
+    out.push(bullet('외지인 방문자', `${fmt(row.outsider)}명${both(row.outsider_mom, yoy('outsider'))}`));
+    out.push(bullet('전체 방문자', `${fmt(row.total)}명${both(row.total_mom, yoy('total'))}`));
+    out.push(bullet('외지인 비중', `${row.outsider_share_pct}%${row.share_pp != null ? ` (전월 대비 ${pctTxt(row.share_pp, true)})` : ''}`));
+    out.push(bullet('관광소비', row.spend_eok == null ? '데이터랩 미공개 (공개 후 반영)' : `${row.spend_eok}억원${both(row.spend_mom, yoy('spend_k'))}`));
+    out.push(bullet('관광 검색', `${fmt(row.search)}건${both(row.search_mom, yoy('search'))}`));
+    out.push(note(`※ 방문자 수는 연인원(날마다 센 방문자를 ${row.days}일 동안 더한 수)`));
+    out.push(P.blank);
+    out.push(head('Ⅱ', '주요 동향'));
+    for (const t of summaryLines(M)) out.push(bullet('', t));
+    out.push(P.blank);
+    out.push(head('Ⅲ', '세부 현황'));
+    const pk = D.peak.find((r) => r.month === M);
+    if (pk) {
+      const k = pk.date, info = dayInfo(k), w = '일월화수목금토'[toDate(k).getUTCDay()];
+      const fest = FEST.flatMap((f) => f.editions.filter((e) => e.s <= k && k <= e.e).map(() => f.name))[0];
+      const tag = [info && info.name, fest].filter(Boolean).join(', ');
+      out.push(bullet('가장 붐빈 날', `${+k.slice(4, 6)}월 ${+k.slice(6)}일(${w}) 외지인 ${fmt(pk.outsider)}명${tag ? ` (${tag})` : ''}`));
+    }
+    const top = (arr, n, f) => arr.slice(0, n).map(f).join(', ');
+    const areas = of('visitors_by_area', M).sort((a, b) => b.visitors - a.visitors);
+    if (areas.length) out.push(bullet('방문 많은 읍면', top(areas, 3, (r) => `${r.area} ${r.pct}%`)));
+    const org = of('origin', M).filter((r) => r.sgg).sort((a, b) => b.pct - a.pct);
+    if (org.length) out.push(bullet('방문객 주요 거주지', top(org, 5, (r) => `${r.sgg} ${r.pct}%`)));
+    const cats = of('spend_cat', M).sort((a, b) => b.mw - a.mw);
+    if (cats.length && row.spend_eok != null) out.push(bullet('소비 상위 업종', top(cats, 3, (r) => `${r.cat} ${fmt(r.mw)}백만원`)));
+    const types = of('search_type', M).sort((a, b) => b.n - a.n);
+    if (types.length) out.push(bullet('검색 상위 유형', top(types, 3, (r) => `${r.type} ${fmt(r.n)}건`)));
+    out.push(P.blank);
+    out.push(note('※ 출처: 한국관광공사 데이터랩(이동통신·신한카드·티맵 자료 기반 추정값). 절대 수치보다 변화 추이·상대 비교에 활용'));
+    return out.join('');
+  }
+  async function makeOnePager(M) {
+    const btn = $('#btn-report');
+    const old = btn.textContent;
+    btn.disabled = true; btn.textContent = '만드는 중…';
+    try {
+      const buf = await (await fetch('report/template.hwpx', { cache: 'no-cache' })).arrayBuffer();
+      const zip = await JSZip.loadAsync(buf);
+      let sec = await zip.file('Contents/section0.xml').async('string');
+      sec = sec.replace('{{DATE}}', xmlEsc(reportDate())).replace('{{TITLE}}', xmlEsc(`강진군 관광 동향 (${mLabel(M)})`)).replace('{{BODY}}', buildReportBody(M));
+      zip.file('Contents/section0.xml', sec);
+      zip.file('Preview/PrvText.txt', `강진군 관광 동향 (${mLabel(M)})`);
+      const mt = await zip.file('mimetype').async('uint8array');
+      zip.file('mimetype', mt, { compression: 'STORE' });
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/hwp+zip' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `강진군_관광동향_한장요약_${M}.hwpx`;
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch (e) {
+      btn.textContent = '만들기 실패';
+      console.error(e);
+      setTimeout(() => { btn.textContent = old; }, 2500);
+      return;
+    } finally { btn.disabled = false; }
+    btn.textContent = old;
+  }
+
   function renderOverview() {
     const M = state.month;
     const row = D.monthly.find((r) => r.month === M);
@@ -462,13 +561,7 @@
     const pk = D.peak.find((r) => r.month === M);
     const SUM = (window.SUMMARIES || {})[M];
     $('#ai-month').textContent = M ? mLabel(M) : '';
-    let lines = SUM;
-    if (!lines && row && pk) {
-      // 요약이 아직 없는 달: 자동 문장
-      lines = [`외지인 ${fmt(row.outsider)}명(전체 방문의 ${row.outsider_share_pct}%)이 찾았습니다.`,
-        `가장 붐빈 날은 ${pk.day_label}로 외지인 ${fmt(pk.outsider)}명이었습니다.`,
-        `관광소비는 ${row.spend_eok}억원, 관광 검색은 ${fmt(row.search)}건입니다.`];
-    }
+    let lines = summaryLines(M);
     (lines || []).forEach((t) => { const li = el('li'); colorDelta(li, t); tk.append(li); });
     $('#ai-note').textContent = SUM ? 'Claude가 이 달의 방문·소비·검색 데이터와 공휴일·축제 일정을 보고 작성한 요약입니다.' : '이 달의 AI 요약은 아직 없어 자동으로 만든 문장을 보여줍니다.';
     $('.ai-badge').textContent = SUM ? 'AI 요약' : '자동 요약';
@@ -918,6 +1011,7 @@
     if (state.tab === 'overview') renderOverview(); else renderCompare();
   }
 
+  $('#btn-report').addEventListener('click', () => { if (state.month) makeOnePager(state.month); });
   $$('.tab').forEach((b) => b.addEventListener('click', () => {
     const prev = state.tab;
     state.tab = b.dataset.tab; history.replaceState(null, '', '#' + state.tab); render();

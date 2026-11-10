@@ -20,6 +20,7 @@
     </div>
     <label class="ctrl" id="ov-ctrl">기준월
       <select id="month" aria-label="기준월"></select>
+      <button type="button" class="btn-report" id="btn-report" title="선택한 기준월의 요약을 한글(hwpx) 보고서 양식으로 내려받습니다">한장요약</button>
     </label>
   </header>
 
@@ -269,6 +270,8 @@
 <script src="holidays.js"></script>
 <script src="festivals.js"></script>
 <script src="summaries.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="report/parts.js"></script>
 <script src="app.js"></script>
 <!-- 방문 통계: GoatCounter (쿠키·개인정보 수집 없음). 스크립트는 내부망에서도 되도록 저장소에 직접 둠 -->
 <script>window.goatcounter = { path: function () { return location.pathname + (location.hash === '#compare' ? '#compare' : ''); } };</script>
