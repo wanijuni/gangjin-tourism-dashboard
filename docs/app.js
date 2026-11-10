@@ -751,7 +751,7 @@
           const hi = yr.reduce((a, b) => (b.spend_eok > a.spend_eok ? b : a)), lo = yr.reduce((a, b) => (b.spend_eok < a.spend_eok ? b : a));
           const avg = Math.round((d3.mean(yr, (r) => r.spend_eok)) * 10) / 10;
           add([[`최근 ${yr.length}개월 중 가장 많은 달은 ${ml(hi.month)}(${hi.spend_eok}억), 가장 적은 달은 ${ml(lo.month)}(${lo.spend_eok}억)입니다.`]]);
-          add([[`월평균은 ${avg}억원이며, 이번 달은 평균보다 `], [Math.abs(Math.round((row.spend_eok / avg - 1) * 1000) / 10) + '%', row.spend_eok >= avg ? 'up' : 'down'], [row.spend_eok >= avg ? ' 높습니다.' : ' 낮습니다.']]);
+          add([[`최근 ${yr.length}개월 월평균은 ${avg}억원이며, 이번 달은 평균보다 `], [Math.abs(Math.round((row.spend_eok / avg - 1) * 1000) / 10) + '%', row.spend_eok >= avg ? 'up' : 'down'], [row.spend_eok >= avg ? ' 높습니다.' : ' 낮습니다.']]);
         }
         c3.append(ul);
       }
