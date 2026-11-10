@@ -312,7 +312,7 @@
     const left = textW(svg, rows.map((r) => r.label), 'lab') + 10;
     const right = textW(svg, rows.map((r) => o.fmt(r.value))) + 10;
     const x = d3.scaleLinear([0, d3.max(rows, (r) => r.value) || 1], [0, Math.max(10, W - left - right)]);
-    const gs = svg.selectAll('g.r').data(rows).join('g').attr('class', 'r').attr('transform', (d, i) => `translate(0,${i * rowH})`);
+    const gs = svg.selectAll('g.r').data(rows).join('g').attr('class', (d, i) => (o.boldTop && i < o.boldTop ? 'r top' : 'r')).attr('transform', (d, i) => `translate(0,${i * rowH})`);
     gs.append('text').attr('class', 'lab').attr('x', left - 10).attr('y', rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => d.label);
     gs.append('rect').attr('class', 'bar').attr('x', left).attr('y', 5).attr('height', rowH - 10).attr('rx', 4)
       .attr('width', (d) => Math.max(d.value > 0 ? 2 : 0, x(d.value))).style('fill', (d, i) => (o.color ? o.color(d, i) : C0));
@@ -833,7 +833,7 @@
         el('td', c == null ? 'num' : c > 0 ? 'num up' : c < 0 ? 'num down' : 'num', c == null ? '—' : tri(c) + Math.abs(c) + '%'));
       tbO.append(tr);
     });
-    hbars($('#ch-origin-sido'), of('origin_sido', M).map((r) => ({ label: r.sido, value: r.pct })).sort(desc), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
+    hbars($('#ch-origin-sido'), of('origin_sido', M).map((r) => ({ label: r.sido, value: r.pct })).sort(desc), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM), boldTop: 5 });
     const majRows = of('industry_major', M).map((r) => ({ label: r.major, value: r.pct })).sort(desc);
     if (!noSpend) hbars($('#ch-spend-major'), majRows, { name: '지출 비중', fmt: (v) => v + '%', color: () => C1, defs: true });
     explainTop($('#ex-spend-major'), noSpend ? [] : majRows, (r) => r.value + '%');
@@ -847,8 +847,8 @@
     heat($('#ch-search-area'), of('search_area', M), types.map((r) => r.type));
 
     const tb = $('#tbl-origin tbody'); tb.replaceChildren();
-    of('origin', M).sort((a, b) => b.pct - a.pct).slice(0, 15).forEach((r) => {
-      const tr = el('tr'); tr.append(el('td', null, r.sido), el('td', null, r.sgg), el('td', 'num', String(r.pct))); tb.append(tr);
+    of('origin', M).sort((a, b) => b.pct - a.pct).slice(0, 15).forEach((r, i) => {
+      const tr = el('tr', i < 5 ? 'top' : null); tr.append(el('td', null, r.sido), el('td', null, r.sgg), el('td', 'num', String(r.pct))); tb.append(tr);
     });
   }
 
