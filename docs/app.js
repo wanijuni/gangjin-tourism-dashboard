@@ -544,13 +544,14 @@
     const types = of('search_type', M).sort((a, b) => b.n - a.n);
     if (types.length) it.push(L('검색 상위 유형', top(types, 3, (r) => `${r.type} ${fmt(r.n)}건`)));
     it.push({ k: 'blank', last: true });
-    it.push(Object.assign(N('※ 출처: 한국관광공사 데이터랩(추정값), 변화 추이·상대 비교용으로 활용'), { src: true }));
+    it.push(Object.assign(N('※ 출처: 한국관광공사 데이터랩 (추정값, 변화 추이·상대 비교용)'), { src: true }));
     return it;
   }
   // 줄 수 계산 (자간 sp%)
   function lineCount(item, sp) {
     // 글머리(○)는 자간을 줄이지 않아 줄마다 위치가 같게 유지됨
-    const k = 16 / item.size, w = textEm(item.bullet) + textEm(item.pre + item.text) * (1 + sp / 100);
+    // ※ 안내 줄은 굵은 글씨라 더 넓게 잡음(실제 파일에서 확인)
+    const k = 16 / item.size, w = (textEm(item.bullet) + textEm(item.pre + item.text) * (1 + sp / 100)) * (item.note ? 1.12 : 1);
     const first = LINE_EM * k, rest = (LINE_EM - HANG_EM) * k;
     return w <= first ? 1 : 1 + Math.ceil((w - first) / rest);
   }
