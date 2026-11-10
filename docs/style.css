@@ -57,9 +57,12 @@ body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--fo
 select, button { font: inherit; }
 .ctrl select { color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 14px; }
 
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
-.tab { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); padding: 10px 14px; margin-bottom: -1px; cursor: pointer; font-size: 15px; }
-.tab[aria-selected=true] { color: var(--fg); border-bottom-color: var(--fg); font-weight: 600; }
+.tabs { display: flex; gap: 6px; margin: 4px 0 22px; padding: 5px; background: color-mix(in srgb, var(--c0) 9%, var(--panel)); border: 1px solid color-mix(in srgb, var(--c0) 25%, var(--line)); border-radius: 14px; width: max-content; max-width: 100%; }
+.tab { background: none; border: 0; border-radius: 10px; color: var(--fg); opacity: .75; padding: 11px 26px; cursor: pointer; font: inherit; font-size: 17px; font-weight: 700; letter-spacing: -.01em; transition: background .15s, color .15s, opacity .15s; }
+.tab:hover { opacity: 1; background: color-mix(in srgb, var(--c0) 14%, transparent); }
+.tab[aria-selected=true] { opacity: 1; background: var(--c0); color: var(--bg); box-shadow: 0 2px 8px color-mix(in srgb, var(--c0) 35%, transparent); }
+.tab:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+@media (max-width: 480px) { .tabs { width: 100%; } .tab { flex: 1; padding: 10px 8px; font-size: 16px; } }
 
 .take { font-size: 16px; line-height: 1.7; margin: 0 0 20px; max-width: 60rem; }
 .take b { font-weight: 700; }
@@ -240,7 +243,7 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .map-side td.muted { color: var(--muted); }
 
 .empty-note { margin: 0; padding: 28px 12px; text-align: center; color: var(--muted); font-size: 13.5px; background: color-mix(in srgb, var(--fg) 3%, transparent); border-radius: 10px; }
-.btn-report { flex: none; white-space: nowrap; margin-left: 4px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--c0); background: var(--c0); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-report { flex: none; white-space: nowrap; margin-left: 4px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--c0); background: var(--c0); color: var(--bg); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .btn-report:hover { filter: brightness(1.08); }
 .btn-report:disabled { opacity: .6; cursor: progress; }
 .btn-report:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
