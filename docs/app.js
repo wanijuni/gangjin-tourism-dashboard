@@ -689,7 +689,7 @@
       const v = el('div', 'ps-v'); v.append(document.createTextNode(val), el('small', null, unit));
       const d = el('div', 'ps-d');
       if (note) d.append(el('span', 'muted', note));
-      else { d.append('전월 ', dl(mom, pp)); if (y !== undefined) d.append('  전년 ', dl(y, pp)); }
+      else d.append('전월 대비 ', dl(mom, pp));
       c.append(el('div', 'ps-l', label), v, d); kp.append(c);
     };
     card('외지인 방문자', fmt(row.outsider), '명', row.outsider_mom, yoy('outsider'));
