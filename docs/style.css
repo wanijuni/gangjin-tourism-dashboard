@@ -281,3 +281,10 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .pdf-sheet .ps-chart { margin-top: 4px; }
 .pdf-sheet .ps-chart .daylegend { font-size: 10px; margin-bottom: 2px; }
 .pdf-sheet .ps-foot { margin-top: auto; font-size: 10px; color: var(--muted); line-height: 1.6; border-top: 1px solid var(--line); padding-top: 6px; }
+.pdf-sheet .ps-tbl { width: 100%; border-collapse: collapse; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.pdf-sheet .ps-tbl th { text-align: left; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--line); padding: 3px 4px; }
+.pdf-sheet .ps-tbl td { padding: 2.5px 4px; border-bottom: 1px solid var(--grid); }
+.pdf-sheet .ps-tbl .n { text-align: right; } .pdf-sheet .ps-tbl th:nth-child(n+3) { text-align: right; }
+.pdf-sheet .ps-tbl .c { text-align: center; color: var(--muted); } .pdf-sheet .ps-tbl th:first-child { text-align: center; }
+.pdf-sheet .ps-tbl .up { color: var(--up); font-weight: 700; } .pdf-sheet .ps-tbl .down { color: var(--down); font-weight: 700; }
+.pdf-sheet .ps-tbl tbody tr:first-child td { font-weight: 700; }

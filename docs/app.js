@@ -708,15 +708,28 @@
     const box = (title, note, cls) => { const b = el('div', 'ps-box ' + (cls || '')); b.append(el('div', 'ps-h', title)); if (note) b.append(el('div', 'ps-n', note)); const c = el('div', 'ps-chart'); b.append(c); return [b, c]; };
     const [b1, c1] = box('일별 방문자 수', '막대 = 현지인 + 외지인, 빨간 표시 = 외지인이 가장 많은 날', 'wide');
     sheet.append(b1);
+    const spendOk = row.spend_eok != null;
     const g2 = el('div', 'ps-grid');
-    const [b2, c2] = box('최근 13개월 관광소비', '신용카드 관광소비액(억원) · 주황 = 이번 달, 파랑 = 전년 같은 달');
-    const [b3, c3] = box('읍면별 방문자 수', '진할수록 방문자가 많음');
+    const [b2, c2] = box('읍면별 방문자 순위', '월간 방문자 수(연인원)와 전월 대비 증감');
+    const [b3, c3] = box('방문객은 어디서 왔나', '외지인 방문객의 거주 시도 비율(상위 6)');
     g2.append(b2, b3); sheet.append(g2);
     const g3 = el('div', 'ps-grid');
-    const [b4, c4] = box('검색 유형 (상위 6)', '티맵 목적지 검색 건수');
-    const spendOk = row.spend_eok != null;
-    const [b5, c5] = spendOk ? box('소비 업종 (상위 6)', '신용카드 소비액, 백만원') : box('방문객 거주지 (상위 6)', '외지인 방문객의 거주 시군구 비율');
+    const [b4, c4] = spendOk ? box('무엇에 썼나 (업종 대분류)', '신용카드 관광소비 지출 비중') : box('방문객 거주 시군구 (상위 6)', '관광소비 자료 공개 전이라 거주지로 대신 표시');
+    const [b5, c5] = box('무엇을 찾았나 (검색 유형)', '티맵 목적지 검색 비중(상위 6)');
     g3.append(b4, b5); sheet.append(g3);
+    // 읍면 순위 표
+    const PM = prevM(M), prev = new Map(of('visitors_by_area', PM).map((r) => [r.area, r.visitors]));
+    const tbl = el('table', 'ps-tbl'), th = el('tr');
+    for (const h of ['순위', '읍면', '방문자', '비율', '전월 대비']) th.append(el('th', null, h));
+    const thead = el('thead'); thead.append(th); tbl.append(thead);
+    const tbody = el('tbody');
+    of('visitors_by_area', M).sort((p, q) => q.visitors - p.visitors).forEach((r, k) => {
+      const tr = el('tr'), o = prev.get(r.area), c = o ? Math.round((r.visitors / o - 1) * 1000) / 10 : null;
+      tr.append(el('td', 'c', String(k + 1)), el('td', null, r.area), el('td', 'n', fmt(r.visitors)), el('td', 'n', r.pct + '%'),
+        el('td', 'n ' + (c > 0 ? 'up' : c < 0 ? 'down' : ''), c == null ? '—' : (c > 0 ? '▲' : c < 0 ? '▼' : '') + Math.abs(c) + '%'));
+      tbody.append(tr);
+    });
+    tbl.append(tbody); c2.append(tbl);
     const ft = el('div', 'ps-foot');
     ft.append(el('div', null, '· 방문자 수는 연인원(날마다 센 방문자의 합)이며, 한 장소(지자체 내 기지국)에 30분 이상 머문 사람을 방문자로 셉니다.'),
       el('div', null, '· 출처: 한국관광공사 데이터랩(이동통신·신한카드·티맵). 추정값이므로 변화 추이와 상대 비교 위주로 활용하세요.'));
@@ -724,11 +737,11 @@
     return { sheet, draw() {
       const days = of('daily', M);
       dailyBars(c1, days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.local, d.outsider] })), [{ name: '현지인', color: CM }, { name: '외지인', color: C0 }], '명');
-      trendBars(c2, M);
-      choropleth(c3, of('visitors_by_area', M).map((r) => ({ label: r.area, value: r.visitors, pct: r.pct })), { short: (r) => (Math.round(r.value / 1000) / 10) + '만', lines: () => [] });
-      hbars(c4, of('search_type', M).sort((a, b) => b.n - a.n).slice(0, 6).map((r) => ({ label: r.type, value: r.n })), { name: '검색', fmt: (v) => fmt(v) + '건', color: () => C2 });
-      if (spendOk) hbars(c5, of('spend_cat', M).sort((a, b) => b.mw - a.mw).slice(0, 6).map((r) => ({ label: r.cat, value: r.mw })), { name: '소비', fmt: (v) => fmt(v), color: () => C1 });
-      else hbars(c5, of('origin', M).filter((r) => r.sgg).sort((a, b) => b.pct - a.pct).slice(0, 6).map((r) => ({ label: r.sgg, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
+      const pctRows = (rows, lab, v, n = 6) => { const tot = d3.sum(rows, (r) => r[v]) || 1; return rows.slice().sort((p, q) => q[v] - p[v]).slice(0, n).map((r) => ({ label: r[lab], value: Math.round((r[v] / tot) * 1000) / 10 })); };
+      hbars(c3, of('origin_sido', M).slice().sort((p, q) => q.pct - p.pct).slice(0, 6).map((r) => ({ label: r.sido, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
+      if (spendOk) hbars(c4, of('industry_major', M).slice().sort((p, q) => q.pct - p.pct).map((r) => ({ label: r.major, value: r.pct })), { name: '비중', fmt: (v) => v + '%', color: () => C1 });
+      else hbars(c4, of('origin', M).filter((r) => r.sgg).sort((p, q) => q.pct - p.pct).slice(0, 6).map((r) => ({ label: r.sgg, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
+      hbars(c5, pctRows(of('search_type', M), 'type', 'n'), { name: '비중', fmt: (v) => v + '%', color: () => C2 });
     } };
   }
   async function makeOnePdf(M) {
