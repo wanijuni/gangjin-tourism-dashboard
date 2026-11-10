@@ -715,8 +715,8 @@
     const [b3, c3] = spendOk ? box('지난 1년간 관광소비', '월별 신용카드 관광소비액(억원) · 주황 = 이번 달, 파랑 = 전년 같은 달') : box('방문객은 어디서 왔나', '관광소비 자료 공개 전이라 거주 시도 비율로 대신 표시');
     g2.append(b2, b3); sheet.append(g2);
     const g3 = el('div', 'ps-grid');
-    const [b4, c4] = spendOk ? box('무엇에 썼나 (업종 대분류)', '신용카드 관광소비 지출 비중') : box('방문객 거주 시군구 (상위 6)', '관광소비 자료 공개 전이라 거주지로 대신 표시');
-    const [b5, c5] = box('무엇을 찾았나 (검색 유형)', '티맵 목적지 검색 비중(상위 6)');
+    const [b4, c4] = spendOk ? box('무엇에 썼나 (업종 대분류)', '신용카드 관광소비 지출 비중(상위 5)') : box('방문객 거주 시군구 (상위 5)', '관광소비 자료 공개 전이라 거주지로 대신 표시');
+    const [b5, c5] = box('무엇을 찾았나 (검색 유형)', '티맵 목적지 검색 비중(상위 5)');
     g3.append(b4, b5); sheet.append(g3);
     // 읍면 순위 표
     const PM = prevM(M), prev = new Map(of('visitors_by_area', PM).map((r) => [r.area, r.visitors]));
@@ -741,9 +741,9 @@
       const pctRows = (rows, lab, v, n = 6) => { const tot = d3.sum(rows, (r) => r[v]) || 1; return rows.slice().sort((p, q) => q[v] - p[v]).slice(0, n).map((r) => ({ label: r[lab], value: Math.round((r[v] / tot) * 1000) / 10 })); };
       if (spendOk) trendBars(c3, M);
       else hbars(c3, of('origin_sido', M).slice().sort((p, q) => q.pct - p.pct).slice(0, 6).map((r) => ({ label: r.sido, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
-      if (spendOk) hbars(c4, of('industry_major', M).slice().sort((p, q) => q.pct - p.pct).map((r) => ({ label: r.major, value: r.pct })), { name: '비중', fmt: (v) => v + '%', color: () => C1 });
-      else hbars(c4, of('origin', M).filter((r) => r.sgg).sort((p, q) => q.pct - p.pct).slice(0, 6).map((r) => ({ label: r.sgg, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
-      hbars(c5, pctRows(of('search_type', M), 'type', 'n'), { name: '비중', fmt: (v) => v + '%', color: () => C2 });
+      if (spendOk) hbars(c4, of('industry_major', M).slice().sort((p, q) => q.pct - p.pct).slice(0, 5).map((r) => ({ label: r.major, value: r.pct })), { name: '비중', fmt: (v) => v + '%', color: () => C1 });
+      else hbars(c4, of('origin', M).filter((r) => r.sgg).sort((p, q) => q.pct - p.pct).slice(0, 5).map((r) => ({ label: r.sgg, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
+      hbars(c5, pctRows(of('search_type', M), 'type', 'n', 5), { name: '비중', fmt: (v) => v + '%', color: () => C2 });
     } };
   }
   async function makeOnePdf(M) {
