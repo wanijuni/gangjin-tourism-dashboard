@@ -98,6 +98,12 @@ abbr.yeon { text-decoration: underline dotted; text-underline-offset: 3px; curso
 .legend { display: flex; gap: 16px; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
 .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .sw.c0 { background: var(--c0); } .sw.cm { background: var(--cm); }
+#ch-cmp-daily, .legend:has(#lg-a) { --cmp-b: #7d848e; }
+.legend:has(#lg-a) { font-size: 14px; font-weight: 700; color: var(--fg); }
+.legend:has(#lg-a) .sw { width: 22px; height: 5px; border-radius: 3px; vertical-align: 3px; }
+.legend:has(#lg-a) .sw.cm { background: var(--cmp-b); }
+.chart svg.l2 text { font-size: 13px; fill: var(--fg); opacity: .85; }
+.chart svg.l2 text.val-l { font-size: 13px; font-weight: 800; opacity: 1; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; }
 
 .tip { position: fixed; pointer-events: none; z-index: 10; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 6px 10px; font-size: 12.5px; white-space: nowrap; }
 .tip-h { color: var(--muted); margin-bottom: 2px; }

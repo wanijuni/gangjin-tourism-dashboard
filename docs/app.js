@@ -968,13 +968,13 @@
     if (showWx) wxLegend(box, allKeys);
     const RH = showWx ? 30 : 17; // 기준·비교 줄 높이 (날씨가 있으면 아이콘 자리만큼 넓힘)
     const H = daily ? 278 + (RH - 17) * 2 : 240;
-    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const svg = d3.select(box).append('svg').attr('class', 'l2').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     // Y축을 0부터가 아니라 값이 있는 구간만 보여 줘서 두 기간의 차이가 잘 보이게 함
     const vs = [...A, ...B].map((d) => d.v).filter((v) => v != null && isFinite(v));
     const lo = d3.min(vs) || 0, hi = d3.max(vs) || 1, pad = Math.max((hi - lo) * 0.25, hi * 0.03);
     const y0 = d3.scaleLinear([Math.max(0, lo - pad), hi + pad * 0.6], [0, 1]).nice(5);
     const ticks = y0.ticks(4);
-    const m = { t: 12, r: 14, b: daily ? 60 + (RH - 17) * 2 : 22, l: Math.max(textW(svg, ticks.map((v) => compact.format(v))), daily ? textW(svg, ['기준', '비교']) + 8 : 0) + 10 };
+    const m = { t: o.monthly ? 26 : 12, r: 14, b: daily ? 60 + (RH - 17) * 2 : 22, l: Math.max(textW(svg, ticks.map((v) => compact.format(v))), daily ? textW(svg, ['기준', '비교']) + 8 : 0) + 10 };
     const x = d3.scaleLinear([1, n], [m.l, W - m.r]);
     const y = d3.scaleLinear(y0.domain(), [H - m.b, m.t]);
     if (daily) {
@@ -1008,13 +1008,26 @@
       .attr('text-anchor', (d) => (d === 1 ? 'start' : d === n ? 'end' : 'middle')).text(tickLab)
       .style('fill', (i) => { if (!daily) return null; const f = dayInfo(keyA(i)); return !f ? null : f.type === '토' ? 'var(--day-sat)' : 'var(--day-sun)'; });
     const line = d3.line().defined((d) => d.v != null).x((d) => x(d.i)).y((d) => y(d.v));
-    [[B, CM], [A, C0]].forEach(([s, c]) => {
-      svg.append('path').datum(s).attr('d', line).style('fill', 'none').style('stroke', c).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
-      if (o.monthly) svg.append('g').selectAll('circle').data(s).join('circle').attr('cx', (d) => x(d.i)).attr('cy', (d) => y(d.v)).attr('r', 3).style('fill', c);
+    // 선·점·값을 굵게: 기준 = 파랑, 비교 = 진한 회색
+    const CB = 'var(--cmp-b)';
+    [[B, CB, false], [A, C0, true]].forEach(([s, c, isA]) => {
+      svg.append('path').datum(s).attr('d', line).style('fill', 'none').style('stroke', c).attr('stroke-width', o.monthly ? (isA ? 4 : 3.2) : (isA ? 2.8 : 2.2)).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+      if (o.monthly) {
+        const pts = s.filter((d) => d.v != null);
+        svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', (d) => x(d.i)).attr('cy', (d) => y(d.v)).attr('r', 6).style('fill', c).style('stroke', 'var(--panel)').attr('stroke-width', 2);
+        if (n <= 12) {
+          // 값 표시: 기준은 위, 비교는 아래(겹치면 반대쪽)
+          const other = new Map((isA ? B : A).map((d) => [d.i, d.v]));
+          svg.append('g').selectAll('text').data(pts).join('text').attr('class', 'val-l')
+            .attr('x', (d) => x(d.i)).attr('text-anchor', (d) => (d.i === 1 ? 'start' : d.i === n ? 'end' : 'middle'))
+            .attr('y', (d) => { const ov = other.get(d.i); const up = ov == null ? isA : (isA ? d.v >= ov : d.v > ov); return y(d.v) + (up ? -12 : 22); })
+            .style('fill', c).text((d) => compact.format(d.v));
+        }
+      }
     });
     const rule = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--axis)').attr('visibility', 'hidden');
     const dA = svg.append('circle').attr('r', 4.5).style('fill', C0).attr('visibility', 'hidden');
-    const dB = svg.append('circle').attr('r', 4.5).style('fill', CM).attr('visibility', 'hidden');
+    const dB = svg.append('circle').attr('r', 4.5).style('fill', 'var(--cmp-b)').attr('visibility', 'hidden');
     const ia = new Map(A.map((d) => [d.i, d])), ib = new Map(B.map((d) => [d.i, d]));
     svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).style('fill', 'transparent')
       .on('mousemove', (ev) => {
