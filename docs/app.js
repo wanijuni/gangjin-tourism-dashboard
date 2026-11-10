@@ -1076,8 +1076,8 @@
         dB.attr('cx', x(i)).attr('cy', b ? y(b.v) : 0).attr('visibility', b ? 'visible' : 'hidden');
         tip.show(ev, o.monthly ? `${i}번째 달` : `${i}일째`, [
           [C0, a ? a.label : o.la, a ? fmt(a.v) + o.unit : '자료 없음'],
-          [CM, b ? b.label : o.lb, b ? fmt(b.v) + o.unit : '자료 없음']]
-          .concat(daily && WX ? [[null, '기준 날씨', wxText(keyA(i))], [null, '비교 날씨', wxText(keyB(i))]] : []));
+          ['#7d848e', b ? b.label : o.lb, b ? fmt(b.v) + o.unit : '자료 없음']]
+          .concat(daily && WX ? [[C0, '기준 날씨', wxText(keyA(i))], ['#7d848e', '비교 날씨', wxText(keyB(i))]] : []));
       })
       .on('mouseleave', () => { rule.attr('visibility', 'hidden'); dA.attr('visibility', 'hidden'); dB.attr('visibility', 'hidden'); tip.hide(); });
   }
