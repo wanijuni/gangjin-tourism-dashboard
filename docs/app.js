@@ -625,8 +625,27 @@
   }
 
   // ---------- 한장요약 (PDF) ----------
-  // 그래프 속 글자는 그림으로 옮기면 웹글꼴을 못 쓰므로, 처음부터 PC 기본 글꼴로 재고 그림
-  const PDF_FONT = "'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',sans-serif";
+  // 그래프(SVG)는 그림으로 옮겨질 때 웹글꼴을 못 쓰므로, 필요한 Pretendard 조각을 SVG 안에 직접 넣어 줌
+  const PDF_FONT = "'Pretendard Variable', Pretendard, 'Malgun Gothic', '맑은 고딕', sans-serif";
+  let fontCss = null;
+  const b64 = (buf) => { let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+  async function embedSvgFont(root) {
+    const chars = new Set([...root.querySelectorAll('svg text')].flatMap((t) => [...t.textContent]).map((c) => c.codePointAt(0)));
+    if (!chars.size) return;
+    if (!fontCss) fontCss = await (await fetch('vendor/pretendard/pretendardvariable-dynamic-subset.css')).text();
+    const faces = [...fontCss.matchAll(/@font-face\s*{([^}]*)}/g)].map((m) => m[1]);
+    const out = [];
+    for (const f of faces) {
+      const url = (f.match(/url\(([^)]+)\)/) || [])[1], rng = (f.match(/unicode-range:\s*([^;]+);/) || [])[1];
+      if (!url || !rng) continue;
+      const hit = rng.split(',').some((r) => { const m = r.trim().match(/U\+([0-9a-f]+)(?:-([0-9a-f]+))?/i); if (!m) return false; const a = parseInt(m[1], 16), b = m[2] ? parseInt(m[2], 16) : a; for (const c of chars) if (c >= a && c <= b) return true; return false; });
+      if (!hit) continue;
+      const buf = await (await fetch('vendor/pretendard/' + url.replace(/^\.\//, ''))).arrayBuffer();
+      out.push(`@font-face{font-family:'Pretendard Variable';font-weight:45 920;src:url(data:font/woff2;base64,${b64(buf)}) format('woff2');unicode-range:${rng};}`);
+    }
+    const css = out.join('');
+    root.querySelectorAll('svg').forEach((svg) => { const st = document.createElementNS('http://www.w3.org/2000/svg', 'style'); st.textContent = css; svg.insertBefore(st, svg.firstChild); });
+  }
   const loadScript = (src) => new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = () => bad(new Error(src)); document.head.append(sc); });
   // SVG를 그림으로 옮길 때 CSS(변수·클래스)가 빠지지 않도록 계산된 색·글꼴을 속성으로 박아 둠
   function inlineSvgStyles(root) {
@@ -774,6 +793,7 @@
       draw();
       host.querySelectorAll('.wx-row, .wx-h, .wx-it').forEach((n) => n.remove()); // 날씨 아이콘은 PDF에서 뺌
       inlineSvgStyles(sheet);
+      await embedSvgFont(sheet);
       await document.fonts.ready;
       // 글꼴 차이로 내용이 넓어져도 A4 폭(794px)만 찍도록 크기를 못박음
       const cv = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, width: 794, windowWidth: 1200, scrollX: 0, scrollY: 0 });

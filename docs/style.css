@@ -280,7 +280,7 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .pdf-sheet .ps-sum ol { margin: 4px 0 0; padding: 0; list-style: none; line-height: 1.55; font-size: 12px; display: grid; gap: 2px; }
 .pdf-sheet .ps-sum li { display: flex; gap: 6px; }
 .pdf-sheet .ps-num { color: var(--c0); flex: none; }
-.pdf-sheet svg text { font-family: 'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',sans-serif; }
+
 .pdf-sheet .ps-h { font-size: 13px; font-weight: 800; }
 .pdf-sheet .ps-n { font-size: 10px; color: var(--muted); margin-top: 1px; }
 .pdf-sheet .ps-box { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px 6px; min-width: 0; }
