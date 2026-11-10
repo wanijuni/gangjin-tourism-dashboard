@@ -711,7 +711,7 @@
     const spendOk = row.spend_eok != null;
     const g2 = el('div', 'ps-grid');
     const [b2, c2] = box('읍면별 방문자 순위', '월간 방문자 수(연인원)와 전월 대비 증감');
-    const [b3, c3] = box('방문객은 어디서 왔나', '외지인 방문객의 거주 시도 비율(상위 6)');
+    const [b3, c3] = spendOk ? box('어디에 썼나 (업종 상위 6)', '신용카드 관광소비액, 억원') : box('방문객은 어디서 왔나', '관광소비 자료 공개 전이라 거주 시도 비율로 대신 표시');
     g2.append(b2, b3); sheet.append(g2);
     const g3 = el('div', 'ps-grid');
     const [b4, c4] = spendOk ? box('무엇에 썼나 (업종 대분류)', '신용카드 관광소비 지출 비중') : box('방문객 거주 시군구 (상위 6)', '관광소비 자료 공개 전이라 거주지로 대신 표시');
@@ -738,7 +738,8 @@
       const days = of('daily', M);
       dailyBars(c1, days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.local, d.outsider] })), [{ name: '현지인', color: CM }, { name: '외지인', color: C0 }], '명');
       const pctRows = (rows, lab, v, n = 6) => { const tot = d3.sum(rows, (r) => r[v]) || 1; return rows.slice().sort((p, q) => q[v] - p[v]).slice(0, n).map((r) => ({ label: r[lab], value: Math.round((r[v] / tot) * 1000) / 10 })); };
-      hbars(c3, of('origin_sido', M).slice().sort((p, q) => q.pct - p.pct).slice(0, 6).map((r) => ({ label: r.sido, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
+      if (spendOk) hbars(c3, of('spend_cat', M).slice().sort((p, q) => q.mw - p.mw).slice(0, 6).map((r) => ({ label: r.cat, value: Math.round(r.mw / 10) / 10 })), { name: '소비액', fmt: (v) => v.toFixed(1) + '억', color: () => C1 });
+      else hbars(c3, of('origin_sido', M).slice().sort((p, q) => q.pct - p.pct).slice(0, 6).map((r) => ({ label: r.sido, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
       if (spendOk) hbars(c4, of('industry_major', M).slice().sort((p, q) => q.pct - p.pct).map((r) => ({ label: r.major, value: r.pct })), { name: '비중', fmt: (v) => v + '%', color: () => C1 });
       else hbars(c4, of('origin', M).filter((r) => r.sgg).sort((p, q) => q.pct - p.pct).slice(0, 6).map((r) => ({ label: r.sgg, value: r.pct })), { name: '비율', fmt: (v) => v + '%', color: (d, i) => (i === 0 ? C0 : CM) });
       hbars(c5, pctRows(of('search_type', M), 'type', 'n'), { name: '비중', fmt: (v) => v + '%', color: () => C2 });
