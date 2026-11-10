@@ -513,10 +513,10 @@
     const ly = D.monthly.find((r) => r.month === String(+M.slice(0, 4) - 1) + M.slice(4));
     const yoy = (k) => (ly && row[k] != null && ly[k] ? Math.round((row[k] / ly[k] - 1) * 1000) / 10 : null);
     const both = (mom, y, pp) => { const a = [pctTxt(mom, pp) && `전월 대비 ${pctTxt(mom, pp)}`, pctTxt(y, pp) && `전년 동월 대비 ${pctTxt(y, pp)}`].filter(Boolean); return a.length ? ` (${a.join(', ')})` : ''; };
-    const L = (label, text, one = true) => ({ k: 'line', pre: ` ○ ${label ? label + ' : ' : ''}`, text, one, size: 16 });
-    const N = (text) => ({ k: 'line', pre: '', text: ' ' + text, one: true, size: 14, note: true });
+    const L = (label, text, one = true) => ({ k: 'line', bullet: ' ○ ', pre: label ? label + ' : ' : '', text, one, size: 16 });
+    const N = (text) => ({ k: 'line', bullet: '', pre: '', text: ' ' + text, one: true, size: 14, note: true });
     const it = [];
-    it.push({ k: 'head', num: 'Ⅰ', h: `핵심 지표 (${mLabel(M)})` });
+    it.push({ k: 'head', num: 'Ⅰ', h: '핵 심 지 표' });
     it.push(L('외지인 방문자', `${fmt(row.outsider)}명${both(row.outsider_mom, yoy('outsider'))}`));
     it.push(L('전체 방문자', `${fmt(row.total)}명${both(row.total_mom, yoy('total'))}`));
     it.push(L('외지인 비중', `${row.outsider_share_pct}%${row.share_pp != null ? ` (전월 대비 ${pctTxt(row.share_pp, true)})` : ''}`));
@@ -550,7 +550,8 @@
   }
   // 줄 수 계산 (자간 sp%)
   function lineCount(item, sp) {
-    const k = 16 / item.size, w = textEm(item.pre + item.text) * (1 + sp / 100);
+    // 글머리(○)는 자간을 줄이지 않아 줄마다 위치가 같게 유지됨
+    const k = 16 / item.size, w = textEm(item.bullet) + textEm(item.pre + item.text) * (1 + sp / 100);
     const first = LINE_EM * k, rest = (LINE_EM - HANG_EM) * k;
     return w <= first ? 1 : 1 + Math.ceil((w - first) / rest);
   }
@@ -597,7 +598,7 @@
       if (it.note) return P.line.replace('{{RUNS}}', run(it.text, BASE.note, it.sp));
       const segs = [[it.pre, null], ...deltaSegs(it.text)];
       const h = it.size === 15 ? 1500 : null;
-      return P.line.replace('{{RUNS}}', segs.filter(([t]) => t).map(([t, c]) => run(t, c ? BASE[c] : BASE.normal, it.sp, h)).join(''));
+      return P.line.replace('{{RUNS}}', run(it.bullet, BASE.normal, 0, h) + segs.filter(([t]) => t).map(([t, c]) => run(t, c ? BASE[c] : BASE.normal, it.sp, h)).join(''));
     }).join('');
   }
   async function makeOnePager(M) {
