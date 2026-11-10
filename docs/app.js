@@ -680,17 +680,13 @@
       .attr('x', (r) => x(r.month) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').style('font-size', '10px').style('fill', 'var(--muted)')
       .text((r) => (r.month.slice(4) === '01' ? `'${r.month.slice(2, 4)}.1` : `${+r.month.slice(4)}월`));
     const lab = has.filter((r) => r.month === M || r.month === LY);
-    // 값 글자가 옆 막대에 겹치지 않게: 양 끝 막대는 바깥쪽으로 맞추고, 옆 막대가 더 높으면 그 위로 올림
+    // 값 글자: 자기 막대 바로 위. 양 끝 막대는 바깥쪽으로 맞추고, 흰 테두리로 옆 막대와 겹쳐도 또렷하게
     const idx = new Map(rows.map((r, k) => [r.month, k]));
-    const labY = (r) => {
-      const k = idx.get(r.month), nb = [rows[k - 1], rows[k + 1]].filter((q) => q && val(q) != null).map(val);
-      const top = Math.max(val(r), ...(k === 0 || k === rows.length - 1 ? nb : []));
-      return y(top) - 6;
-    };
     svg.append('g').selectAll('text').data(lab).join('text')
-      .attr('x', (r) => { const k = idx.get(r.month); return k === 0 ? x(r.month) : k === rows.length - 1 ? x(r.month) + x.bandwidth() : x(r.month) + x.bandwidth() / 2; })
-      .attr('y', labY).attr('text-anchor', (r) => { const k = idx.get(r.month); return k === 0 ? 'start' : k === rows.length - 1 ? 'end' : 'middle'; })
-      .style('font-size', '10.5px').style('font-weight', 700).style('fill', (r) => (r.month === M ? C1 : C0))
+      .attr('x', (r) => { const k = idx.get(r.month); return k === 0 ? x(r.month) - 2 : k === rows.length - 1 ? x(r.month) + x.bandwidth() + 2 : x(r.month) + x.bandwidth() / 2; })
+      .attr('y', (r) => y(val(r)) - 5).attr('text-anchor', (r) => { const k = idx.get(r.month); return k === 0 ? 'start' : k === rows.length - 1 ? 'end' : 'middle'; })
+      .style('font-size', '10.5px').style('font-weight', 800).style('fill', (r) => (r.month === M ? C1 : C0))
+      .style('paint-order', 'stroke').style('stroke', '#ffffff').style('stroke-width', '4px').style('stroke-linejoin', 'round')
       .text((r) => val(r) + '억');
   }
   function buildSheet(M) {
