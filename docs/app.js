@@ -744,11 +744,9 @@
         // 그래프 아래 짧은 설명 (자동 계산)
         const i = D.monthly.findIndex((r) => r.month === M);
         const yr = D.monthly.slice(Math.max(0, i - 11), i + 1).filter((r) => r.spend_eok != null);
-        const lyR = D.monthly.find((r) => r.month === String(+M.slice(0, 4) - 1) + M.slice(4));
         const ml = (m) => `${m.slice(0, 4) === M.slice(0, 4) ? '' : `'${m.slice(2, 4)}년 `}${+m.slice(4)}월`;
         const ul = el('ul', 'ps-ex');
         const add = (parts) => { const li = el('li'); for (const [t, c] of parts) li.append(c ? el('b', c, t) : document.createTextNode(t)); ul.append(li); };
-        if (lyR && lyR.spend_eok) { const c = Math.round((row.spend_eok / lyR.spend_eok - 1) * 1000) / 10; add([['이번 달 '], [row.spend_eok + '억원', null], ['은 전년 같은 달(' + lyR.spend_eok + '억원)보다 '], [Math.abs(c) + '%', c >= 0 ? 'up' : 'down'], [c >= 0 ? ' 많습니다.' : ' 적습니다.']]); }
         if (yr.length >= 3) {
           const hi = yr.reduce((a, b) => (b.spend_eok > a.spend_eok ? b : a)), lo = yr.reduce((a, b) => (b.spend_eok < a.spend_eok ? b : a));
           const avg = Math.round((d3.mean(yr, (r) => r.spend_eok)) * 10) / 10;
