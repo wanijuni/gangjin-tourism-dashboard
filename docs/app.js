@@ -639,25 +639,32 @@
       if (n.tagName === 'text' || n.tagName === 'tspan') n.style.setProperty('font-family', PDF_FONT);
     });
   }
+  // 최근 13개월 관광소비(억원) 막대: 이번 달 파랑, 전년 같은 달 주황
   function trendBars(box, M) {
     box.replaceChildren();
     const i = D.monthly.findIndex((r) => r.month === M);
     const rows = D.monthly.slice(Math.max(0, i - 12), i + 1);
+    const val = (r) => r.spend_eok;
+    if (!rows.some((r) => val(r) != null)) return noData(box, '관광소비 자료가 없습니다');
+    const LY = String(+M.slice(0, 4) - 1) + M.slice(4);
     const W = Math.max(260, box.clientWidth), H = 190, m = { t: 22, r: 6, b: 22, l: 6 };
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     const x = d3.scaleBand(rows.map((r) => r.month), [m.l, W - m.r]).padding(0.22);
-    const y = d3.scaleLinear([0, d3.max(rows, (r) => r.outsider) * 1.15], [H - m.b, m.t]);
-    svg.append('g').selectAll('rect').data(rows).join('rect')
-      .attr('x', (r) => x(r.month)).attr('width', x.bandwidth()).attr('y', (r) => y(r.outsider)).attr('height', (r) => y(0) - y(r.outsider)).attr('rx', 2)
-      .style('fill', (r) => (r.month === M ? C0 : r.month === String(+M.slice(0, 4) - 1) + M.slice(4) ? 'var(--c1)' : CM));
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => val(r) || 0) * 1.18], [H - m.b, m.t]);
+    const has = rows.filter((r) => val(r) != null);
+    svg.append('g').selectAll('rect').data(has).join('rect')
+      .attr('x', (r) => x(r.month)).attr('width', x.bandwidth()).attr('y', (r) => y(val(r))).attr('height', (r) => y(0) - y(val(r))).attr('rx', 2)
+      .style('fill', (r) => (r.month === M ? C1 : r.month === LY ? C0 : CM));
+    svg.append('g').selectAll('text').data(rows.filter((r) => val(r) == null)).join('text')
+      .attr('x', (r) => x(r.month) + x.bandwidth() / 2).attr('y', y(0) - 6).attr('text-anchor', 'middle').style('font-size', '9px').style('fill', 'var(--muted)').text('미공개');
     svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick-l')
       .attr('x', (r) => x(r.month) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').style('font-size', '10px').style('fill', 'var(--muted)')
       .text((r) => (r.month.slice(4) === '01' ? `'${r.month.slice(2, 4)}.1` : `${+r.month.slice(4)}월`));
-    const lab = rows.filter((r, k) => r.month === M || k === 0 || r.month === String(+M.slice(0, 4) - 1) + M.slice(4));
+    const lab = has.filter((r) => r.month === M || r.month === LY);
     svg.append('g').selectAll('text').data(lab).join('text')
-      .attr('x', (r) => x(r.month) + x.bandwidth() / 2).attr('y', (r) => y(r.outsider) - 5).attr('text-anchor', 'middle')
-      .style('font-size', '10.5px').style('font-weight', 700).style('fill', (r) => (r.month === M ? C0 : 'var(--muted)'))
-      .text((r) => (Math.round(r.outsider / 1000) / 10) + '만');
+      .attr('x', (r) => x(r.month) + x.bandwidth() / 2).attr('y', (r) => y(val(r)) - 5).attr('text-anchor', 'middle')
+      .style('font-size', '10.5px').style('font-weight', 700).style('fill', (r) => (r.month === M ? C1 : C0))
+      .text((r) => val(r) + '억');
   }
   function buildSheet(M) {
     const row = D.monthly.find((r) => r.month === M);
@@ -702,7 +709,7 @@
     const [b1, c1] = box('일별 방문자 수', '막대 = 현지인 + 외지인, 빨간 표시 = 외지인이 가장 많은 날', 'wide');
     sheet.append(b1);
     const g2 = el('div', 'ps-grid');
-    const [b2, c2] = box('최근 13개월 외지인 방문자', '파랑 = 이번 달, 주황 = 전년 같은 달 (연인원)');
+    const [b2, c2] = box('최근 13개월 관광소비', '신용카드 관광소비액(억원) · 주황 = 이번 달, 파랑 = 전년 같은 달');
     const [b3, c3] = box('읍면별 방문자 수', '진할수록 방문자가 많음');
     g2.append(b2, b3); sheet.append(g2);
     const g3 = el('div', 'ps-grid');
@@ -1280,7 +1287,9 @@
       D = data;
       const ms = D.months;
       $('#month').replaceChildren(...ms.slice().reverse().map((m) => new Option(mLabel(m), m)));
-      state.month = ms[ms.length - 1] || null;
+      // 처음 열 때 기준월: 소비(카드) 자료까지 모두 들어온 가장 최근 달 (아직 소비 자료가 없는 달은 목록에서 고를 수 있음)
+      const full = D.monthly.filter((r) => r.spend_eok != null).map((r) => r.month);
+      state.month = full[full.length - 1] || ms[ms.length - 1] || null;
       if (state.month) $('#month').value = state.month;
       if (location.hash === '#compare') state.tab = 'compare';
       renderFooter();
