@@ -760,7 +760,8 @@
       host.querySelectorAll('.wx-row, .wx-h, .wx-it').forEach((n) => n.remove()); // 날씨 아이콘은 PDF에서 뺌
       inlineSvgStyles(sheet);
       await document.fonts.ready;
-      const cv = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+      // 글꼴 차이로 내용이 넓어져도 A4 폭(794px)만 찍도록 크기를 못박음
+      const cv = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, width: 794, windowWidth: 1200, scrollX: 0, scrollY: 0 });
       const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
       const PW = 210, PH = 297;
       let w = PW, h = (cv.height / cv.width) * PW;
