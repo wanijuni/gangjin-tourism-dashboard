@@ -257,7 +257,7 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 /* ---------- 한장요약 PDF (A4 794px 폭, 항상 밝은 화면으로) ---------- */
 .pdf-host { position: fixed; left: -10000px; top: 0; width: 794px; z-index: -1; }
 .pdf-host.show { left: 0; z-index: 9999; background: #888; padding: 10px; }
-.pdf-sheet { --bg: #ffffff; --panel: #ffffff; --fg: #1f2328; --muted: #6a6f76; --line: #e3e1dc; --grid: #ecebe7; --axis: #c9c6bf; --c0: #2b6cb0; --c1: #c2622d; --c2: #3f8a5a; --cm: #c4c9d0; --up: #e8000b; --down: #0050e6;
+.pdf-sheet { --bg: #ffffff; --panel: #ffffff; --fg: #1f2328; --muted: #6a6f76; --line: #e3e1dc; --grid: #ecebe7; --axis: #c9c6bf; --c0: #2b6cb0; --c1: #c2622d; --c2: #3f8a5a; --cm: #c4c9d0; --up: #e8000b; --down: #0050e6; --peak-bg: #d6001c; --peak-fg: #ffffff; --day-sat: #3f72d9; --day-sun: #d64541; --day-hol: #e8901a; --day-nat: #8a4fd1; --day-pub: #1f9e8e; --day-sub: #d9488f; --rest-bg: rgba(214, 69, 65, .06);
   color-scheme: light; width: 794px; max-width: 794px; overflow: hidden; min-height: 1123px; box-sizing: border-box; padding: 30px 34px 24px; background: #fff; color: var(--fg); font-family: var(--font); font-size: 12px; display: flex; flex-direction: column; gap: 12px; }
 .pdf-sheet .ps-head { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; border-bottom: 3px solid var(--c0); }
 .pdf-sheet .ps-pals { display: flex; align-items: flex-end; }
@@ -301,3 +301,4 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .pdf-sheet .ps-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; }
 .chart g.r.top text { font-weight: 800; fill: var(--fg); }
 #tbl-origin tr.top td { font-weight: 800; color: var(--fg); }
+.pdf-sheet .chart text.peak-t, .pdf-sheet text.peak-t { fill: #ffffff; font-size: 13px; font-weight: 800; }
