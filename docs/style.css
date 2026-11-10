@@ -240,7 +240,7 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .map-side td.muted { color: var(--muted); }
 
 .empty-note { margin: 0; padding: 28px 12px; text-align: center; color: var(--muted); font-size: 13.5px; background: color-mix(in srgb, var(--fg) 3%, transparent); border-radius: 10px; }
-.btn-report { margin-left: 4px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--c0); background: var(--c0); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-report { flex: none; white-space: nowrap; margin-left: 4px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--c0); background: var(--c0); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .btn-report:hover { filter: brightness(1.08); }
 .btn-report:disabled { opacity: .6; cursor: progress; }
 .btn-report:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
