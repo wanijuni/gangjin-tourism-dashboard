@@ -706,7 +706,8 @@
     sm.append(ol); sheet.append(sm);
     // 그래프 칸
     const box = (title, note, cls) => { const b = el('div', 'ps-box ' + (cls || '')); b.append(el('div', 'ps-h', title)); if (note) b.append(el('div', 'ps-n', note)); const c = el('div', 'ps-chart'); b.append(c); return [b, c]; };
-    const [b1, c1] = box('일별 방문자 수', '막대 = 현지인 + 외지인, 빨간 표시 = 외지인이 가장 많은 날', 'wide');
+    const [b1, c1] = box('일별 방문자 수', '막대 전체 높이 = 전체 방문자, 빨간 표시 = 외지인이 가장 많은 날', 'wide');
+    { const lg = el('div', 'ps-legend'); for (const [c, t] of [['#2b6cb0', '외지인'], ['#c4c9d0', '현지인']]) { const it = el('span'); const sw = el('i'); sw.style.background = c; it.append(sw, t); lg.append(it); } b1.insertBefore(lg, c1); }
     sheet.append(b1);
     const spendOk = row.spend_eok != null;
     const g2 = el('div', 'ps-grid');

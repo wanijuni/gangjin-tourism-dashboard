@@ -288,3 +288,6 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .pdf-sheet .ps-tbl .c { text-align: center; color: var(--muted); } .pdf-sheet .ps-tbl th:first-child { text-align: center; }
 .pdf-sheet .ps-tbl .up { color: var(--up); font-weight: 700; } .pdf-sheet .ps-tbl .down { color: var(--down); font-weight: 700; }
 .pdf-sheet .ps-tbl tbody tr:first-child td { font-weight: 700; }
+.pdf-sheet .ps-legend { display: flex; gap: 14px; margin-top: 4px; font-size: 11.5px; font-weight: 700; }
+.pdf-sheet .ps-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.pdf-sheet .ps-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; }
