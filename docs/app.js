@@ -469,53 +469,136 @@
     return `'${String(d.getFullYear()).slice(2)}. ${d.getMonth() + 1}. ${d.getDate()}.(${w})`;
   }
   const pctTxt = (v, pp) => (v == null ? null : (v > 0 ? '▲' : v < 0 ? '▼' : '') + Math.abs(v) + (pp ? '%p' : '%'));
-  function buildReportBody(M) {
-    const P = window.REPORT_PARTS;
-    const CH = { normal: P.normal, up: P.red, down: P.blue, note: P.note };
-    let pid = 9100000;
-    const run = (t, k = 'normal') => `<hp:run charPrIDRef="${CH[k]}"><hp:t>${xmlEsc(t)}</hp:t></hp:run>`;
-    const para = (segs) => P.line.replace('{{RUNS}}', segs.map(([t, k]) => run(t, k || 'normal')).join(''));
-    const colored = (t) => deltaSegs(t).map(([x, c]) => [x, c]);
-    const bullet = (label, text) => para([[` ○ ${label ? label + ' : ' : ''}`], ...colored(text)]);
-    const sub = (text) => para([['   - '], ...colored(text)]);
-    const note = (text) => para([[' ' + text, 'note']]);
-    const head = (num, h) => P.sec.replace('{{NUM}}', num).replace('{{HEAD}}', xmlEsc(h)).replace('{{PID}}', pid++).replace('{{TID}}', pid++);
+  // 글자 폭 추정(휴먼명조, 글자 크기 1 = 1em). 실제 한글 파일의 줄바꿈 위치로 맞춘 값
+  function textEm(t) {
+    let w = 0;
+    for (const c of t) {
+      if (c >= '가' && c <= '힣') w += 1;
+      else if (/[0-9A-Za-z]/.test(c)) w += 0.6;
+      else if (c === ' ') w += 0.4;
+      else if ('○▲▼※☎·「」'.includes(c)) w += 1;
+      else if ('.,:'.includes(c)) w += 0.4;
+      else if (c === '%') w += 0.6;
+      else if ('()~/-'.includes(c)) w += 0.3;
+      else w += 0.6;
+    }
+    return w;
+  }
+  // 본문 폭: 16pt 기준 약 30.1em (A4, 좌우 여백 20mm). 둘째 줄부터는 내어쓰기만큼 좁음
+  const LINE_EM = 29.7, HANG_EM = 3181 / 1600;
+  const PAGE_H = 75500; // 한 쪽에 들어가는 높이(HWPUNIT), 실제 파일에서 잰 값보다 조금 작게
+  // 글자 모양 복제기: 기존 글자 모양에 자간·크기만 바꾼 새 모양을 header.xml에 덧붙임
+  function charMaker(hdr) {
+    const made = new Map();
+    let n = +hdr.match(/<hh:charProperties itemCnt="(\d+)">/)[1];
+    const extra = [];
+    return {
+      get(base, spacing = 0, height = null) {
+        if (!spacing && !height) return base;
+        const key = `${base}|${spacing}|${height}`;
+        if (made.has(key)) return made.get(key);
+        const src = hdr.match(new RegExp(`<hh:charPr id="${base}"[\\s\\S]*?</hh:charPr>`))[0];
+        let x = src.replace(`id="${base}"`, `id="${n}"`);
+        if (spacing) x = x.replace(/<hh:spacing [^>]*\/>/, `<hh:spacing hangul="${spacing}" latin="${spacing}" hanja="${spacing}" japanese="${spacing}" other="${spacing}" symbol="${spacing}" user="${spacing}"/>`);
+        if (height) x = x.replace(/ height="\d+"/, ` height="${height}"`);
+        extra.push(x); made.set(key, n); return n++;
+      },
+      header() {
+        return hdr.replace(/<hh:charProperties itemCnt="\d+">/, `<hh:charProperties itemCnt="${n}">`).replace('</hh:charProperties>', extra.join('') + '</hh:charProperties>');
+      },
+    };
+  }
+  function reportItems(M) {
     const row = D.monthly.find((r) => r.month === M);
     const ly = D.monthly.find((r) => r.month === String(+M.slice(0, 4) - 1) + M.slice(4));
     const yoy = (k) => (ly && row[k] != null && ly[k] ? Math.round((row[k] / ly[k] - 1) * 1000) / 10 : null);
     const both = (mom, y, pp) => { const a = [pctTxt(mom, pp) && `전월 대비 ${pctTxt(mom, pp)}`, pctTxt(y, pp) && `전년 동월 대비 ${pctTxt(y, pp)}`].filter(Boolean); return a.length ? ` (${a.join(', ')})` : ''; };
-    const out = [];
-    out.push(head('Ⅰ', `핵심 지표 (${mLabel(M)})`));
-    out.push(bullet('외지인 방문자', `${fmt(row.outsider)}명${both(row.outsider_mom, yoy('outsider'))}`));
-    out.push(bullet('전체 방문자', `${fmt(row.total)}명${both(row.total_mom, yoy('total'))}`));
-    out.push(bullet('외지인 비중', `${row.outsider_share_pct}%${row.share_pp != null ? ` (전월 대비 ${pctTxt(row.share_pp, true)})` : ''}`));
-    out.push(bullet('관광소비', row.spend_eok == null ? '데이터랩 미공개 (공개 후 반영)' : `${row.spend_eok}억원${both(row.spend_mom, yoy('spend_k'))}`));
-    out.push(bullet('관광 검색', `${fmt(row.search)}건${both(row.search_mom, yoy('search'))}`));
-    out.push(note(`※ 방문자 수는 연인원(날마다 센 방문자를 ${row.days}일 동안 더한 수)`));
-    out.push(P.blank);
-    out.push(head('Ⅱ', '주요 동향'));
-    for (const t of summaryLines(M)) out.push(bullet('', t));
-    out.push(P.blank);
-    out.push(head('Ⅲ', '세부 현황'));
+    const L = (label, text, one = true) => ({ k: 'line', pre: ` ○ ${label ? label + ' : ' : ''}`, text, one, size: 16 });
+    const N = (text) => ({ k: 'line', pre: '', text: ' ' + text, one: true, size: 14, note: true });
+    const it = [];
+    it.push({ k: 'head', num: 'Ⅰ', h: `핵심 지표 (${mLabel(M)})` });
+    it.push(L('외지인 방문자', `${fmt(row.outsider)}명${both(row.outsider_mom, yoy('outsider'))}`));
+    it.push(L('전체 방문자', `${fmt(row.total)}명${both(row.total_mom, yoy('total'))}`));
+    it.push(L('외지인 비중', `${row.outsider_share_pct}%${row.share_pp != null ? ` (전월 대비 ${pctTxt(row.share_pp, true)})` : ''}`));
+    it.push(L('관광소비', row.spend_eok == null ? '데이터랩 미공개 (공개 후 반영)' : `${row.spend_eok}억원${both(row.spend_mom, yoy('spend_k'))}`));
+    it.push(L('관광 검색', `${fmt(row.search)}건${both(row.search_mom, yoy('search'))}`));
+    it.push(Object.assign(N(`※ 방문자 수는 연인원(날마다 센 방문자를 ${row.days}일 동안 더한 수)`), { visNote: true }));
+    it.push({ k: 'blank' });
+    it.push({ k: 'head', num: 'Ⅱ', h: '주 요 동 향' });
+    for (const t of summaryLines(M)) it.push(L('', t, false));
+    it.push({ k: 'blank' });
+    it.push({ k: 'head', num: 'Ⅲ', h: '세 부 현 황' });
     const pk = D.peak.find((r) => r.month === M);
     if (pk) {
       const k = pk.date, info = dayInfo(k), w = '일월화수목금토'[toDate(k).getUTCDay()];
       const fest = FEST.flatMap((f) => f.editions.filter((e) => e.s <= k && k <= e.e).map(() => f.name))[0];
       const tag = [info && info.name, fest].filter(Boolean).join(', ');
-      out.push(bullet('가장 붐빈 날', `${+k.slice(4, 6)}월 ${+k.slice(6)}일(${w}) 외지인 ${fmt(pk.outsider)}명${tag ? ` (${tag})` : ''}`));
+      it.push(L('가장 붐빈 날', `${+k.slice(4, 6)}월 ${+k.slice(6)}일(${w}) 외지인 ${fmt(pk.outsider)}명${tag ? ` (${tag})` : ''}`));
     }
     const top = (arr, n, f) => arr.slice(0, n).map(f).join(', ');
     const areas = of('visitors_by_area', M).sort((a, b) => b.visitors - a.visitors);
-    if (areas.length) out.push(bullet('방문 많은 읍면', top(areas, 3, (r) => `${r.area} ${r.pct}%`)));
+    if (areas.length) it.push(L('방문 많은 읍면', top(areas, 3, (r) => `${r.area} ${r.pct}%`)));
     const org = of('origin', M).filter((r) => r.sgg).sort((a, b) => b.pct - a.pct);
-    if (org.length) out.push(bullet('방문객 주요 거주지', top(org, 5, (r) => `${r.sgg} ${r.pct}%`)));
+    if (org.length) it.push(Object.assign(L('방문객 주요 거주지', top(org, 5, (r) => `${r.sgg} ${r.pct}%`)), { alt: top(org, 3, (r) => `${r.sgg} ${r.pct}%`) }));
     const cats = of('spend_cat', M).sort((a, b) => b.mw - a.mw);
-    if (cats.length && row.spend_eok != null) out.push(bullet('소비 상위 업종', top(cats, 3, (r) => `${r.cat} ${fmt(r.mw)}백만원`)));
+    if (cats.length && row.spend_eok != null) it.push(L('소비 상위 업종', top(cats, 3, (r) => `${r.cat} ${(Math.round(r.mw / 10) / 10).toFixed(1)}억`)));
     const types = of('search_type', M).sort((a, b) => b.n - a.n);
-    if (types.length) out.push(bullet('검색 상위 유형', top(types, 3, (r) => `${r.type} ${fmt(r.n)}건`)));
-    out.push(P.blank);
-    out.push(note('※ 출처: 한국관광공사 데이터랩(이동통신·신한카드·티맵 자료 기반 추정값). 절대 수치보다 변화 추이·상대 비교에 활용'));
-    return out.join('');
+    if (types.length) it.push(L('검색 상위 유형', top(types, 3, (r) => `${r.type} ${fmt(r.n)}건`)));
+    it.push({ k: 'blank', last: true });
+    it.push(Object.assign(N('※ 출처: 한국관광공사 데이터랩(추정값), 변화 추이·상대 비교용으로 활용'), { src: true }));
+    return it;
+  }
+  // 줄 수 계산 (자간 sp%)
+  function lineCount(item, sp) {
+    const k = 16 / item.size, w = textEm(item.pre + item.text) * (1 + sp / 100);
+    const first = LINE_EM * k, rest = (LINE_EM - HANG_EM) * k;
+    return w <= first ? 1 : 1 + Math.ceil((w - first) / rest);
+  }
+  function layoutReport(items) {
+    // 1) 한 줄 항목: 한 줄에 들어갈 때까지 자간을 줄임(최대 -20%)
+    for (const it of items) {
+      if (it.k !== 'line') continue;
+      it.sp = 0;
+      if (it.one) while (lineCount(it, it.sp) > 1 && it.sp > -20) it.sp -= 1;
+      if (it.one && lineCount(it, it.sp) > 1 && it.alt) { it.text = it.alt; it.sp = 0; while (lineCount(it, it.sp) > 1 && it.sp > -20) it.sp -= 1; }
+      it.lines = lineCount(it, it.sp);
+    }
+    const lh = (it) => (it.size === 16 ? 2560 : it.size === 15 ? 2400 : 2240);
+    const height = () => 13103 + items.reduce((h, it) => h + (it.k === 'head' ? 4197 : it.k === 'blank' ? (it.small ? 1360 : 2240) : it.lines * lh(it)), 0);
+    const refit = (it) => { it.sp = 0; while (lineCount(it, it.sp) > 1 && it.sp > -20) it.sp -= 1; it.lines = lineCount(it, it.sp); };
+    const squeezeII = (min) => { for (const it of items) if (it.k === 'line' && !it.one) { let best = it.sp, bl = lineCount(it, it.sp); for (let sp = 0; sp >= min; sp--) { const n = lineCount(it, sp); if (n < bl) { bl = n; best = sp; } } it.sp = best; it.lines = bl; } };
+    // 2) 한 쪽을 넘으면 차례로: 빈 줄 얇게 → 주요 동향 자간 → 연인원 안내를 출처 줄에 합치기 → 마지막 빈 줄 빼기 → 주요 동향 글자 15pt → 빈 줄 모두 빼기
+    const steps = [
+      () => items.forEach((it) => { if (it.k === 'blank') it.small = true; }),
+      () => squeezeII(-12),
+      () => {
+        const i = items.findIndex((it) => it.visNote), src = items.find((it) => it.src);
+        if (i < 0 || !src) return;
+        items.splice(i, 1);
+        src.text = ' ※ 방문자 수는 연인원(날마다 센 수의 합) · 출처: 한국관광공사 데이터랩(추정값)';
+        refit(src);
+      },
+      () => { const i = items.findIndex((it) => it.last); if (i >= 0) items.splice(i, 1); },
+      () => { items.forEach((it) => { if (it.k === 'line' && !it.one) { it.size = 15; it.sp = 0; it.lines = lineCount(it, 0); } }); squeezeII(-12); },
+      () => { for (let i = items.length - 1; i >= 0; i--) if (items[i].k === 'blank') items.splice(i, 1); },
+    ];
+    for (const step of steps) { if (height() <= PAGE_H) break; step(); }
+    return { items, height: height() };
+  }
+  function buildReportBody(M, cm) {
+    const P = window.REPORT_PARTS;
+    const BASE = { normal: P.normal, up: P.red, down: P.blue, note: P.note };
+    let pid = 9100000;
+    const { items } = layoutReport(reportItems(M));
+    const run = (t, base, sp, h) => `<hp:run charPrIDRef="${cm.get(base, sp, h)}"><hp:t>${xmlEsc(t)}</hp:t></hp:run>`;
+    return items.map((it) => {
+      if (it.k === 'head') return P.sec.replace('{{NUM}}', it.num).replace('{{HEAD}}', xmlEsc(it.h)).replace('{{PID}}', pid++).replace('{{TID}}', pid++);
+      if (it.k === 'blank') return it.small ? P.blank.replace(/charPrIDRef="(\d+)"/, (m0, id) => `charPrIDRef="${cm.get(+id, 0, 800)}"`) : P.blank;
+      if (it.note) return P.line.replace('{{RUNS}}', run(it.text, BASE.note, it.sp));
+      const segs = [[it.pre, null], ...deltaSegs(it.text)];
+      const h = it.size === 15 ? 1500 : null;
+      return P.line.replace('{{RUNS}}', segs.filter(([t]) => t).map(([t, c]) => run(t, c ? BASE[c] : BASE.normal, it.sp, h)).join(''));
+    }).join('');
   }
   async function makeOnePager(M) {
     const btn = $('#btn-report');
@@ -525,8 +608,10 @@
       const buf = await (await fetch('report/template.hwpx', { cache: 'no-cache' })).arrayBuffer();
       const zip = await JSZip.loadAsync(buf);
       let sec = await zip.file('Contents/section0.xml').async('string');
-      sec = sec.replace('{{DATE}}', xmlEsc(reportDate())).replace('{{TITLE}}', xmlEsc(`강진군 관광 동향 (${mLabel(M)})`)).replace('{{BODY}}', buildReportBody(M));
+      const cm = charMaker(await zip.file('Contents/header.xml').async('string'));
+      sec = sec.replace('{{DATE}}', xmlEsc(reportDate())).replace('{{TITLE}}', xmlEsc(`강진군 관광 동향 (${mLabel(M)})`)).replace('{{BODY}}', buildReportBody(M, cm));
       zip.file('Contents/section0.xml', sec);
+      zip.file('Contents/header.xml', cm.header());
       zip.file('Preview/PrvText.txt', `강진군 관광 동향 (${mLabel(M)})`);
       const mt = await zip.file('mimetype').async('uint8array');
       zip.file('mimetype', mt, { compression: 'STORE' });
@@ -1011,6 +1096,7 @@
     if (state.tab === 'overview') renderOverview(); else renderCompare();
   }
 
+  window.__reportLayout = (M) => layoutReport(reportItems(M)); // 점검용
   $('#btn-report').addEventListener('click', () => { if (state.month) makeOnePager(state.month); });
   $$('.tab').forEach((b) => b.addEventListener('click', () => {
     const prev = state.tab;
