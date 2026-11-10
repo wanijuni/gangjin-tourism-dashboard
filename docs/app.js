@@ -522,7 +522,6 @@
     it.push(L('외지인 비중', `${row.outsider_share_pct}%${row.share_pp != null ? ` (전월 대비 ${pctTxt(row.share_pp, true)})` : ''}`));
     it.push(L('관광소비', row.spend_eok == null ? '데이터랩 미공개 (공개 후 반영)' : `${row.spend_eok}억원${both(row.spend_mom, yoy('spend_k'))}`));
     it.push(L('관광 검색', `${fmt(row.search)}건${both(row.search_mom, yoy('search'))}`));
-    it.push(Object.assign(N(`※ 방문자 수는 연인원(날마다 센 방문자를 ${row.days}일 동안 더한 수)`), { visNote: true }));
     it.push({ k: 'blank' });
     it.push({ k: 'head', num: 'Ⅱ', h: '주 요 동 향' });
     for (const t of summaryLines(M)) it.push(L('', t, false));
@@ -568,17 +567,10 @@
     const height = () => 13103 + items.reduce((h, it) => h + (it.k === 'head' ? 4197 : it.k === 'blank' ? (it.small ? 1360 : 2240) : it.lines * lh(it)), 0);
     const refit = (it) => { it.sp = 0; while (lineCount(it, it.sp) > 1 && it.sp > -20) it.sp -= 1; it.lines = lineCount(it, it.sp); };
     const squeezeII = (min) => { for (const it of items) if (it.k === 'line' && !it.one) { let best = it.sp, bl = lineCount(it, it.sp); for (let sp = 0; sp >= min; sp--) { const n = lineCount(it, sp); if (n < bl) { bl = n; best = sp; } } it.sp = best; it.lines = bl; } };
-    // 2) 한 쪽을 넘으면 차례로: 빈 줄 얇게 → 주요 동향 자간 → 연인원 안내를 출처 줄에 합치기 → 마지막 빈 줄 빼기 → 주요 동향 글자 15pt → 빈 줄 모두 빼기
+    // 2) 한 쪽을 넘으면 차례로: 빈 줄 얇게 → 주요 동향 자간 → 마지막 빈 줄 빼기 → 주요 동향 글자 15pt → 빈 줄 모두 빼기
     const steps = [
       () => items.forEach((it) => { if (it.k === 'blank') it.small = true; }),
       () => squeezeII(-12),
-      () => {
-        const i = items.findIndex((it) => it.visNote), src = items.find((it) => it.src);
-        if (i < 0 || !src) return;
-        items.splice(i, 1);
-        src.text = ' ※ 방문자 수는 연인원(날마다 센 수의 합) · 출처: 한국관광공사 데이터랩(추정값)';
-        refit(src);
-      },
       () => { const i = items.findIndex((it) => it.last); if (i >= 0) items.splice(i, 1); },
       () => { items.forEach((it) => { if (it.k === 'line' && !it.one) { it.size = 15; it.sp = 0; it.lines = lineCount(it, 0); } }); squeezeII(-12); },
       () => { for (let i = items.length - 1; i >= 0; i--) if (items[i].k === 'blank') items.splice(i, 1); },
