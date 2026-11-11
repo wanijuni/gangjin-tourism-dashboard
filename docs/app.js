@@ -744,7 +744,8 @@
     const th = el('thead'); th.append(fh); ft.append(th);
     const tb = el('tbody');
     const dsum = (s0, e0) => { const ds = D.daily.filter((d) => d.date >= s0 && d.date <= e0); return { n: ds.length, v: d3.sum(ds, (d) => d.outsider), span: spanDays(s0, e0) }; };
-    const fests = FEST.flatMap((f) => f.editions.filter((e) => e.year === +Y).map((e) => ({ f, e }))).sort((p, q) => (p.e.s < q.e.s ? -1 : 1));
+    // 전년 회차가 없는 축제(그해 처음 열렸거나 전년에 안 열림)는 비교할 수 없으므로 표에서 뺌
+    const fests = FEST.flatMap((f) => f.editions.filter((e) => e.year === +Y && f.editions.some((q) => q.year === +Y - 1)).map((e) => ({ f, e }))).sort((p, q) => (p.e.s < q.e.s ? -1 : 1));
     for (const { f, e } of fests) {
       const r = dsum(e.s, e.e), pe = f.editions.find((q) => q.year === +Y - 1), pr = pe ? dsum(pe.s, pe.e) : null;
       const full = r.n === r.span, avg = r.n ? Math.round(r.v / r.n) : null;
@@ -756,7 +757,7 @@
         el('td', 'n ' + (c > 0 ? 'up' : c < 0 ? 'down' : ''), c == null ? '—' : (c > 0 ? '▲' : c < 0 ? '▼' : '') + Math.abs(c) + '%'));
       tb.append(tr);
     }
-    if (!fests.length) { const tr = el('tr'); const td = el('td', 'c', `${Y}년 축제 일정이 등록되지 않았습니다.`); td.colSpan = 6; tr.append(td); tb.append(tr); }
+    if (!fests.length) { const tr = el('tr'); const td = el('td', 'c', `${Y}년에 전년 회차와 비교할 수 있는 축제가 없습니다.`); td.colSpan = 6; tr.append(td); tb.append(tr); }
     ft.append(tb); c3.append(ft);
     if (fests.some(({ e }) => { const r = dsum(e.s, e.e); return r.n && r.n !== r.span; })) c3.append(el('div', 'ps-n', '* 자료가 아직 없는 날이 있어 일부 기간만 합한 값입니다. 전년 대비는 하루 평균 외지인으로 비교합니다.'));
     else c3.append(el('div', 'ps-n', '전년 대비는 축제 일수가 해마다 달라 하루 평균 외지인으로 비교합니다.'));
