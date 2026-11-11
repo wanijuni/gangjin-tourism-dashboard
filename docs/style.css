@@ -295,7 +295,7 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .pdf-sheet .ps-tbl .n { text-align: right; } .pdf-sheet .ps-tbl th:nth-child(n+3) { text-align: right; }
 .pdf-sheet .ps-tbl .c { text-align: center; color: var(--muted); } .pdf-sheet .ps-tbl th:first-child { text-align: center; }
 .pdf-sheet .ps-tbl .up { color: var(--up); font-weight: 700; } .pdf-sheet .ps-tbl .down { color: var(--down); font-weight: 700; }
-.pdf-sheet .ps-tbl tbody tr:first-child td { font-weight: 700; }
+.pdf-sheet .ps-tbl.rank tbody tr:first-child td { font-weight: 700; }
 .pdf-sheet .ps-legend { display: flex; gap: 14px; margin-top: 4px; font-size: 11.5px; font-weight: 700; }
 .pdf-sheet .ps-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .pdf-sheet .ps-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; }
@@ -304,3 +304,6 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .pdf-sheet .chart text.peak-t, .pdf-sheet text.peak-t { fill: #ffffff; font-size: 13px; font-weight: 800; }
 .pdf-sheet .ps-ex { margin: 6px 0 0; padding: 6px 8px 4px 20px; background: #f6f5f1; border-radius: 6px; font-size: 10.5px; line-height: 1.55; color: var(--fg); }
 .pdf-sheet .ps-ex .up { color: var(--up); } .pdf-sheet .ps-ex .down { color: var(--down); }
+.pdf-sheet .ps-sub { font-weight: 700; color: var(--fg); margin: 2px 0 0; }
+.pdf-sheet .ps-box.wide { min-width: 0; }
+.ctrls { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: flex-end; }
