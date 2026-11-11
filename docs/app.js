@@ -462,168 +462,11 @@
       row.spend_eok == null ? `관광 검색은 ${fmt(row.search)}건입니다. 관광소비 자료는 아직 공개되지 않았습니다.` : `관광소비는 ${row.spend_eok}억원, 관광 검색은 ${fmt(row.search)}건입니다.`];
   }
 
-  // ---------- 한장요약 (한글 hwpx) ----------
-  const xmlEsc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // 작성일 표기 예: '26. 11. 11.(수)
   function reportDate(d = new Date()) {
     const w = '일월화수목금토'[d.getDay()];
     return `'${String(d.getFullYear()).slice(2)}. ${d.getMonth() + 1}. ${d.getDate()}.(${w})`;
   }
-  const pctTxt = (v, pp) => (v == null ? null : (v > 0 ? '▲' : v < 0 ? '▼' : '') + Math.abs(v) + (pp ? '%p' : '%'));
-  // 글자 폭 추정(휴먼명조, 글자 크기 1 = 1em). 실제 한글 파일의 줄바꿈 위치로 맞춘 값
-  function textEm(t) {
-    let w = 0;
-    for (const c of t) {
-      if (c >= '가' && c <= '힣') w += 1;
-      else if (/[0-9A-Za-z]/.test(c)) w += 0.6;
-      else if (c === ' ') w += 0.4;
-      else if ('○▲▼※☎·「」'.includes(c)) w += 1;
-      else if ('.,:'.includes(c)) w += 0.4;
-      else if (c === '%') w += 0.6;
-      else if ('()~/-'.includes(c)) w += 0.3;
-      else w += 0.6;
-    }
-    return w;
-  }
-  // 본문 폭: 16pt 기준 약 30.1em (A4, 좌우 여백 20mm). 둘째 줄부터는 내어쓰기만큼 좁음
-  const LINE_EM = 29.7, HANG_EM = 3181 / 1600;
-  const PAGE_H = 75500; // 한 쪽에 들어가는 높이(HWPUNIT), 실제 파일에서 잰 값보다 조금 작게
-  // 글자 모양 복제기: 기존 글자 모양에 자간·크기만 바꾼 새 모양을 header.xml에 덧붙임
-  function charMaker(hdr) {
-    const made = new Map();
-    let n = +hdr.match(/<hh:charProperties itemCnt="(\d+)">/)[1];
-    const extra = [];
-    return {
-      get(base, spacing = 0, height = null) {
-        if (!spacing && !height) return base;
-        const key = `${base}|${spacing}|${height}`;
-        if (made.has(key)) return made.get(key);
-        const src = hdr.match(new RegExp(`<hh:charPr id="${base}"[\\s\\S]*?</hh:charPr>`))[0];
-        let x = src.replace(`id="${base}"`, `id="${n}"`);
-        if (spacing) x = x.replace(/<hh:spacing [^>]*\/>/, `<hh:spacing hangul="${spacing}" latin="${spacing}" hanja="${spacing}" japanese="${spacing}" other="${spacing}" symbol="${spacing}" user="${spacing}"/>`);
-        if (height) x = x.replace(/ height="\d+"/, ` height="${height}"`);
-        extra.push(x); made.set(key, n); return n++;
-      },
-      header() {
-        return hdr.replace(/<hh:charProperties itemCnt="\d+">/, `<hh:charProperties itemCnt="${n}">`).replace('</hh:charProperties>', extra.join('') + '</hh:charProperties>');
-      },
-    };
-  }
-  function reportItems(M) {
-    const row = D.monthly.find((r) => r.month === M);
-    const ly = D.monthly.find((r) => r.month === String(+M.slice(0, 4) - 1) + M.slice(4));
-    const yoy = (k) => (ly && row[k] != null && ly[k] ? Math.round((row[k] / ly[k] - 1) * 1000) / 10 : null);
-    const both = (mom, y, pp) => { const a = [pctTxt(mom, pp) && `전월 대비 ${pctTxt(mom, pp)}`, pctTxt(y, pp) && `전년 동월 대비 ${pctTxt(y, pp)}`].filter(Boolean); return a.length ? ` (${a.join(', ')})` : ''; };
-    const L = (label, text, one = true) => ({ k: 'line', bullet: ' ○ ', pre: label ? label + ' : ' : '', text, one, size: 16 });
-    const N = (text) => ({ k: 'line', bullet: '', pre: '', text: ' ' + text, one: true, size: 14, note: true });
-    const it = [];
-    it.push({ k: 'head', num: 'Ⅰ', h: '핵 심 지 표' });
-    it.push(L('외지인 방문자', `${fmt(row.outsider)}명${both(row.outsider_mom, yoy('outsider'))}`));
-    it.push(L('전체 방문자', `${fmt(row.total)}명${both(row.total_mom, yoy('total'))}`));
-    it.push(L('외지인 비중', `${row.outsider_share_pct}%${row.share_pp != null ? ` (전월 대비 ${pctTxt(row.share_pp, true)})` : ''}`));
-    it.push(L('관광소비', row.spend_eok == null ? '데이터랩 미공개 (공개 후 반영)' : `${row.spend_eok}억원${both(row.spend_mom, yoy('spend_k'))}`));
-    it.push(L('관광 검색', `${fmt(row.search)}건${both(row.search_mom, yoy('search'))}`));
-    it.push({ k: 'blank' });
-    it.push({ k: 'head', num: 'Ⅱ', h: '주 요 동 향' });
-    for (const t of summaryLines(M)) it.push(L('', t, false));
-    it.push({ k: 'blank' });
-    it.push({ k: 'head', num: 'Ⅲ', h: '세 부 현 황' });
-    const pk = D.peak.find((r) => r.month === M);
-    if (pk) {
-      const k = pk.date, info = dayInfo(k), w = '일월화수목금토'[toDate(k).getUTCDay()];
-      const fest = FEST.flatMap((f) => f.editions.filter((e) => e.s <= k && k <= e.e).map(() => f.name))[0];
-      const tag = [info && info.name, fest].filter(Boolean).join(', ');
-      it.push(L('가장 붐빈 날', `${+k.slice(4, 6)}월 ${+k.slice(6)}일(${w}) 외지인 ${fmt(pk.outsider)}명${tag ? ` (${tag})` : ''}`));
-    }
-    const top = (arr, n, f) => arr.slice(0, n).map(f).join(', ');
-    const areas = of('visitors_by_area', M).sort((a, b) => b.visitors - a.visitors);
-    if (areas.length) it.push(L('방문 많은 읍면', top(areas, 3, (r) => `${r.area} ${r.pct}%`)));
-    const org = of('origin', M).filter((r) => r.sgg).sort((a, b) => b.pct - a.pct);
-    if (org.length) it.push(Object.assign(L('방문객 주요 거주지', top(org, 5, (r) => `${r.sgg} ${r.pct}%`)), { alt: top(org, 3, (r) => `${r.sgg} ${r.pct}%`) }));
-    const cats = of('spend_cat', M).sort((a, b) => b.mw - a.mw);
-    if (cats.length && row.spend_eok != null) it.push(L('소비 상위 업종', top(cats, 3, (r) => `${r.cat} ${(Math.round(r.mw / 10) / 10).toFixed(1)}억`)));
-    const types = of('search_type', M).sort((a, b) => b.n - a.n);
-    if (types.length) it.push(L('검색 상위 유형', top(types, 3, (r) => `${r.type} ${fmt(r.n)}건`)));
-    it.push({ k: 'blank', last: true });
-    it.push(Object.assign(N('※ 출처: 한국관광공사 데이터랩 (추정값, 변화 추이·상대 비교용)'), { src: true }));
-    return it;
-  }
-  // 줄 수 계산 (자간 sp%)
-  function lineCount(item, sp) {
-    // 글머리(○)는 자간을 줄이지 않아 줄마다 위치가 같게 유지됨
-    // ※ 안내 줄은 굵은 글씨라 더 넓게 잡음(실제 파일에서 확인)
-    const k = 16 / item.size, w = (textEm(item.bullet) + textEm(item.pre + item.text) * (1 + sp / 100)) * (item.note ? 1.12 : 1);
-    const first = LINE_EM * k, rest = (LINE_EM - HANG_EM) * k;
-    return w <= first ? 1 : 1 + Math.ceil((w - first) / rest);
-  }
-  function layoutReport(items) {
-    // 1) 한 줄 항목: 한 줄에 들어갈 때까지 자간을 줄임(최대 -20%)
-    for (const it of items) {
-      if (it.k !== 'line') continue;
-      it.sp = 0;
-      if (it.one) while (lineCount(it, it.sp) > 1 && it.sp > -20) it.sp -= 1;
-      if (it.one && lineCount(it, it.sp) > 1 && it.alt) { it.text = it.alt; it.sp = 0; while (lineCount(it, it.sp) > 1 && it.sp > -20) it.sp -= 1; }
-      it.lines = lineCount(it, it.sp);
-    }
-    const lh = (it) => (it.size === 16 ? 2560 : it.size === 15 ? 2400 : 2240);
-    const height = () => 13103 + items.reduce((h, it) => h + (it.k === 'head' ? 4197 : it.k === 'blank' ? (it.small ? 1360 : 2240) : it.lines * lh(it)), 0);
-    const refit = (it) => { it.sp = 0; while (lineCount(it, it.sp) > 1 && it.sp > -20) it.sp -= 1; it.lines = lineCount(it, it.sp); };
-    const squeezeII = (min) => { for (const it of items) if (it.k === 'line' && !it.one) { let best = it.sp, bl = lineCount(it, it.sp); for (let sp = 0; sp >= min; sp--) { const n = lineCount(it, sp); if (n < bl) { bl = n; best = sp; } } it.sp = best; it.lines = bl; } };
-    // 2) 한 쪽을 넘으면 차례로: 빈 줄 얇게 → 주요 동향 자간 → 마지막 빈 줄 빼기 → 주요 동향 글자 15pt → 빈 줄 모두 빼기
-    const steps = [
-      () => items.forEach((it) => { if (it.k === 'blank') it.small = true; }),
-      () => squeezeII(-12),
-      () => { const i = items.findIndex((it) => it.last); if (i >= 0) items.splice(i, 1); },
-      () => { items.forEach((it) => { if (it.k === 'line' && !it.one) { it.size = 15; it.sp = 0; it.lines = lineCount(it, 0); } }); squeezeII(-12); },
-      () => { for (let i = items.length - 1; i >= 0; i--) if (items[i].k === 'blank') items.splice(i, 1); },
-    ];
-    for (const step of steps) { if (height() <= PAGE_H) break; step(); }
-    return { items, height: height() };
-  }
-  function buildReportBody(M, cm) {
-    const P = window.REPORT_PARTS;
-    const BASE = { normal: P.normal, up: P.red, down: P.blue, note: P.note };
-    let pid = 9100000;
-    const { items } = layoutReport(reportItems(M));
-    const run = (t, base, sp, h) => `<hp:run charPrIDRef="${cm.get(base, sp, h)}"><hp:t>${xmlEsc(t)}</hp:t></hp:run>`;
-    return items.map((it) => {
-      if (it.k === 'head') return P.sec.replace('{{NUM}}', it.num).replace('{{HEAD}}', xmlEsc(it.h)).replace('{{PID}}', pid++).replace('{{TID}}', pid++);
-      if (it.k === 'blank') return it.small ? P.blank.replace(/charPrIDRef="(\d+)"/, (m0, id) => `charPrIDRef="${cm.get(+id, 0, 800)}"`) : P.blank;
-      if (it.note) return P.line.replace('{{RUNS}}', run(it.text, BASE.note, it.sp));
-      const segs = [[it.pre, null], ...deltaSegs(it.text)];
-      const h = it.size === 15 ? 1500 : null;
-      return P.line.replace('{{RUNS}}', run(it.bullet, BASE.normal, 0, h) + segs.filter(([t]) => t).map(([t, c]) => run(t, c ? BASE[c] : BASE.normal, it.sp, h)).join(''));
-    }).join('');
-  }
-  async function makeOnePager(M) {
-    const btn = $('#btn-report');
-    const old = btn.textContent;
-    btn.disabled = true; btn.textContent = '만드는 중…';
-    try {
-      const buf = await (await fetch('report/template.hwpx', { cache: 'no-cache' })).arrayBuffer();
-      const zip = await JSZip.loadAsync(buf);
-      let sec = await zip.file('Contents/section0.xml').async('string');
-      const cm = charMaker(await zip.file('Contents/header.xml').async('string'));
-      sec = sec.replace('{{DATE}}', xmlEsc(reportDate())).replace('{{TITLE}}', xmlEsc(`강진군 관광 동향 (${mLabel(M)})`)).replace('{{BODY}}', buildReportBody(M, cm));
-      zip.file('Contents/section0.xml', sec);
-      zip.file('Contents/header.xml', cm.header());
-      zip.file('Preview/PrvText.txt', `강진군 관광 동향 (${mLabel(M)})`);
-      const mt = await zip.file('mimetype').async('uint8array');
-      zip.file('mimetype', mt, { compression: 'STORE' });
-      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/hwp+zip' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `강진군_관광동향_한장요약_${M}.hwpx`;
-      document.body.append(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    } catch (e) {
-      btn.textContent = '만들기 실패';
-      console.error(e);
-      setTimeout(() => { btn.textContent = old; }, 2500);
-      return;
-    } finally { btn.disabled = false; }
-    btn.textContent = old;
-  }
-
   // ---------- 한장요약 (PDF) ----------
   // 그래프(SVG)는 그림으로 옮겨질 때 웹글꼴을 못 쓰므로, 필요한 Pretendard 조각을 SVG 안에 직접 넣어 줌
   const PDF_FONT = "'Pretendard Variable', Pretendard, 'Malgun Gothic', '맑은 고딕', sans-serif";
@@ -1299,7 +1142,6 @@
     if (state.tab === 'overview') renderOverview(); else renderCompare();
   }
 
-  window.__reportLayout = (M) => layoutReport(reportItems(M)); // 점검용
   $('#btn-report').addEventListener('click', () => { if (state.month) makeOnePdf(state.month); });
   $$('.tab').forEach((b) => b.addEventListener('click', () => {
     const prev = state.tab;
