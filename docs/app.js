@@ -987,17 +987,19 @@
   function renderDemo(M) {
     const box = $('#ch-age'), box2 = $('#ch-age-eup'), ex = $('#ex-age'), ex2 = $('#ex-sex');
     const r = demoRow(M), A = D.demo ? D.demo.ages : [];
+    $('#lg-sex-a').textContent = mLabel(M);
     ex.replaceChildren(); ex2.replaceChildren();
     if (!r || !r.all) {
       const first = D.demo && Object.keys(D.demo.rows).sort()[0];
-      $('#lg-age-a').textContent = mLabel(M); $('#lg-age-b-wrap').hidden = true;
+      $('#lg-age-a').textContent = mLabel(M); $('#lg-age-b-wrap').hidden = true; $('#lg-sex-b-wrap').hidden = true;
       for (const b of [box, box2]) b.replaceChildren(el('p', 'empty-note', `${mLabel(M)} 성·연령 자료가 없습니다.` + (first ? ` (${mLabel(first)}부터 있음)` : '')));
       return;
     }
     const y = String(+M.slice(0, 4) - 1) + M.slice(4), pr = demoRow(y) && demoRow(y).all ? y : null; // 전년 같은 달만 비교
     const pa = pr ? demoRow(pr).all : null;
-    hbars2(box, A.map((g, i) => ({ label: g, a: r.all[i], b: pa ? pa[i] : null })), { la: mLabel(M), lb: pr ? mLabel(pr) : '', fmt: (v) => v + '%' });
-    $('#lg-age-a').textContent = mLabel(M); $('#lg-age-b').textContent = pr ? mLabel(pr) + ' (전년 같은 달)' : ''; $('#lg-age-b-wrap').hidden = !pr;
+    if (pa) hbars2(box, A.map((g, i) => ({ label: g, a: r.all[i], b: pa[i] })), { la: mLabel(M), lb: mLabel(pr), fmt: (v) => v + '%' });
+    else hbars(box, A.map((g, i) => ({ label: g, value: r.all[i] })), { name: '구성비', fmt: (v) => v + '%', color: () => C0 });
+    $('#lg-age-a').textContent = mLabel(M); $('#lg-age-b').textContent = pr ? mLabel(pr) + ' (전년 같은 달)' : ''; $('#lg-age-b-wrap').hidden = !pr; $('#lg-sex-b').textContent = pr ? mLabel(pr) + ' (전년 같은 달)' : ''; $('#lg-sex-b-wrap').hidden = !pr;
     const top = A.map((g, i) => [g, r.all[i]]).sort((p, q) => q[1] - p[1]);
     const mid = (r.all[4] || 0) + (r.all[5] || 0) + (r.all[6] || 0);
     const li = (txt) => ex.append(el('div', 'ex-row', txt));
@@ -1012,10 +1014,17 @@
       if (up[1] <= 0 && dn[1] >= 0) t.append('구성이 거의 같습니다');
       ex.append(t);
     }
-    hbars2(box2, A.map((g, i) => ({ label: g, a: r.eup[i], b: r.myeon[i] })), { la: '강진읍', lb: '면 지역', fmt: (v) => v + '%' });
-    const y2030 = (a) => Math.round(((a[2] || 0) + (a[3] || 0)) * 10) / 10;
-    ex2.append(el('div', 'ex-row', `20~30대 비율: 강진읍 ${y2030(r.eup)}% · 면 지역 ${y2030(r.myeon)}%`));
-    if (r.male != null) ex2.append(el('div', 'ex-row', `성별: 남성 ${r.male}% · 여성 ${Math.round((100 - r.male) * 10) / 10}%`), el('div', 'ex-row muted', '* 휴대폰 명의 기준이라 남성 비율이 실제보다 높게 나올 수 있습니다.'));
+    // 성별 비율: 기준월 vs 전년 같은 달
+    const pm = pr ? demoRow(pr).male : null;
+    if (r.male == null) box2.replaceChildren(el('p', 'empty-note', `${mLabel(M)} 성별 자료가 없습니다.`));
+    else {
+      const fem = (v) => (v == null ? null : Math.round((100 - v) * 10) / 10);
+      if (pm != null) hbars2(box2, [{ label: '남성', a: r.male, b: pm }, { label: '여성', a: fem(r.male), b: fem(pm) }], { la: mLabel(M), lb: mLabel(pr), fmt: (v) => v + '%' });
+      else hbars(box2, [{ label: '남성', value: r.male }, { label: '여성', value: fem(r.male) }], { name: '비율', fmt: (v) => v + '%', color: () => C0 });
+      ex2.append(el('div', 'ex-row', `남성 ${r.male}% · 여성 ${fem(r.male)}%` + (pm != null ? ` (${mLabel(pr)}: 남성 ${pm}% · 여성 ${fem(pm)}%)` : '')));
+      if (pm != null) { const d = Math.round((r.male - pm) * 10) / 10; const t = el('div', 'ex-row'); t.append('전년 같은 달보다 여성 비율 '); t.append(d < 0 ? el('span', 'up', `▲${Math.abs(d)}%p`) : d > 0 ? el('span', 'down', `▼${d}%p`) : '변화 없음'); ex2.append(t); }
+      ex2.append(el('div', 'ex-row muted', '* 휴대폰 명의 기준이라 남성 비율이 실제보다 높게 나올 수 있습니다.'));
+    }
   }
 
   function renderOverview() {
