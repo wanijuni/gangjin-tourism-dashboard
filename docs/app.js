@@ -1490,12 +1490,6 @@
       explainTop2($('#ex-cmp-cat'), catPairs, EX_SPEND, '백만원', la, lb);
     }
     hbars2($('#ch-cmp-sido'), pairMaps(sidoWeighted(A), sidoWeighted(B), (v) => v), { la, lb, fmt: (v) => v + '%' });
-    {
-      const ga = ageOf(PA), gb = ageOf(PBx), box = $('#ch-cmp-age');
-      if (!ga || !ga.ages || !gb || !gb.ages) box.replaceChildren(el('p', 'empty-note', '두 기간 중 성·연령 자료가 없는 기간이 있습니다. (2025년 1월부터 있음)'));
-      else hbars2(box, D.demo.ages.map((g, i) => ({ label: g, a: ga.ages[i], b: gb.ages[i] })), { la, lb, fmt: (v) => v + '%' });
-      $('#cmp-age-note').textContent = '구성비(%). 여러 달이면 달마다 외지인 방문자 수로 가중 평균' + ((ga && ga.miss.length) || (gb && gb.miss.length) ? ' · 자료 없는 달은 빼고 계산' : '') + (state.unit === 'festival' || state.unit === 'custom' ? ' · 월 자료라 축제·특정기간도 그 달 전체 값 기준' : '');
-    }
     const typePairs = pairMaps(sumCols(D.daily_type, PA), sumCols(D.daily_type, PBx), (v) => v);
     hbars2($('#ch-cmp-type'), typePairs, { la, lb, fmt: (v) => fmt(v), defs: SRCH });
     explainTop2($('#ex-cmp-type'), typePairs, EX_SEARCH, '건', la, lb);
