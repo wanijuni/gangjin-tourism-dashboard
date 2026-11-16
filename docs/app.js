@@ -939,8 +939,10 @@
   const hm = (min) => (min == null ? '—' : `${Math.floor(min / 60)}시간 ${Math.round(min % 60)}분`);
   function stayLines(box, M) {
     box.replaceChildren();
-    const rows = D.monthly.filter((r) => r.stay_min != null);
-    if (!rows.length) return noData(box, '체류시간 자료가 없습니다');
+    // 기준월이 속한 해와 그 전년만 (24개월)
+    const Y = +M.slice(0, 4);
+    const rows = D.monthly.filter((r) => r.stay_min != null && (+r.month.slice(0, 4) === Y || +r.month.slice(0, 4) === Y - 1));
+    if (!rows.length) return noData(box, `${Y - 1}~${Y}년 체류시간 자료가 없습니다`);
     const W = Math.max(300, box.clientWidth), H = 220, m = { t: 16, r: 12, b: 24, l: 44 };
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
     const x = d3.scalePoint(rows.map((r) => r.month), [m.l, W - m.r]);
@@ -951,6 +953,7 @@
       svg.append('text').attr('x', m.l - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text(v + '시간');
     }
     const yrs = rows.filter((r) => r.month.slice(4) === '01');
+    svg.append('g').selectAll('text').data(rows.filter((r) => ['04', '07', '10'].includes(r.month.slice(4)))).join('text').attr('x', (r) => x(r.month)).attr('y', H - 6).attr('text-anchor', 'middle').style('fill', 'var(--muted)').text((r) => +r.month.slice(4) + '월');
     svg.append('g').selectAll('text').data(yrs).join('text').attr('x', (r) => x(r.month)).attr('y', H - 6).attr('text-anchor', 'start').text((r) => r.month.slice(0, 4) + '년');
     svg.append('g').selectAll('line').data(yrs).join('line').attr('x1', (r) => x(r.month)).attr('x2', (r) => x(r.month)).attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--grid)').style('stroke-dasharray', '3 3');
     const line = (k) => d3.line().defined((r) => r[k] != null).x((r) => x(r.month)).y((r) => y(r[k] / 60));
@@ -961,7 +964,7 @@
     if (sel) {
       svg.append('circle').attr('cx', x(M)).attr('cy', y(sel.stay_min / 60)).attr('r', 6.5).style('fill', '#d6303e').style('stroke', 'var(--panel)').attr('stroke-width', 2);
       const right = x(M) > W - 90;
-      svg.append('text').attr('x', x(M) + (right ? -9 : 9)).attr('y', y(sel.stay_min / 60) - 9).attr('text-anchor', right ? 'end' : 'start')
+      svg.append('text').attr('x', x(M) + (right ? -9 : 9)).attr('y', y(sel.stay_min / 60) - 16).attr('text-anchor', right ? 'end' : 'start')
         .style('font-weight', 800).style('fill', '#d6303e').style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', '4px').text(hm(sel.stay_min));
     }
     const step = x.step() || 10;
@@ -991,10 +994,10 @@
       for (const b of [box, box2]) b.replaceChildren(el('p', 'empty-note', `${mLabel(M)} 성·연령 자료가 없습니다.` + (first ? ` (${mLabel(first)}부터 있음)` : '')));
       return;
     }
-    const y = String(+M.slice(0, 4) - 1) + M.slice(4), pr = demoRow(y) && demoRow(y).all ? y : demoRow(prevM(M)) && demoRow(prevM(M)).all ? prevM(M) : null;
+    const y = String(+M.slice(0, 4) - 1) + M.slice(4), pr = demoRow(y) && demoRow(y).all ? y : null; // 전년 같은 달만 비교
     const pa = pr ? demoRow(pr).all : null;
     hbars2(box, A.map((g, i) => ({ label: g, a: r.all[i], b: pa ? pa[i] : null })), { la: mLabel(M), lb: pr ? mLabel(pr) : '', fmt: (v) => v + '%' });
-    $('#lg-age-a').textContent = mLabel(M); $('#lg-age-b').textContent = pr ? mLabel(pr) + (pr.slice(4) === M.slice(4) ? ' (전년 같은 달)' : ' (전월)') : ''; $('#lg-age-b-wrap').hidden = !pr;
+    $('#lg-age-a').textContent = mLabel(M); $('#lg-age-b').textContent = pr ? mLabel(pr) + ' (전년 같은 달)' : ''; $('#lg-age-b-wrap').hidden = !pr;
     const top = A.map((g, i) => [g, r.all[i]]).sort((p, q) => q[1] - p[1]);
     const mid = (r.all[4] || 0) + (r.all[5] || 0) + (r.all[6] || 0);
     const li = (txt) => ex.append(el('div', 'ex-row', txt));
