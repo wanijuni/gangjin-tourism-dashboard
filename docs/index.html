@@ -59,6 +59,7 @@
       <div class="kpi"><span class="kpi-l">외지인 비중</span><span class="kpi-v"><span data-k="outsider_share_pct">—</span><span class="kpi-u">%</span></span><span class="kpi-d" data-d="share_pp"></span></div>
       <div class="kpi"><span class="kpi-l">전체 방문자 <abbr class="yeon" tabindex="0" title="연인원: 날마다 센 방문자를 한 달 동안 모두 더한 수입니다. 한 사람이 3일 머물면 3명으로 셉니다.">(연인원 ⓘ)</abbr></span><span class="kpi-v"><span data-k="total">—</span><span class="kpi-u">명</span></span><span class="kpi-d" data-d="total_mom"></span></div>
       <div class="kpi"><span class="kpi-l">관광 검색건수</span><span class="kpi-v"><span data-k="search">—</span><span class="kpi-u">건</span></span><span class="kpi-d" data-d="search_mom"></span></div>
+      <div class="kpi"><span class="kpi-l">외지인 평균 체류시간</span><span class="kpi-v" id="kpi-stay">—</span><span class="kpi-d" id="kpi-stay-d"></span><span class="kpi-d muted" id="kpi-stay-n"></span></div>
     </section>
     <p class="kpi-note" id="kpi-note"></p>
 
@@ -69,6 +70,12 @@
         <p class="note">현지인 + 외지인 = 전체 방문자. 막대에 올리면 일자별 수치가 보입니다.</p>
         <div class="legend"><span><i class="sw c0"></i>외지인</span><span><i class="sw cm"></i>현지인</span></div>
         <div class="chart" id="ch-visit-daily"></div>
+      </div>
+      <div class="card wide">
+        <h3>외지인 평균 체류시간 추이</h3>
+        <p class="note">월별, 강진군과 전국 기초지자체 평균 비교. 점에 올리면 수치가 보입니다.</p>
+        <div class="legend"><span><i class="sw c0"></i>강진군</span><span><i class="sw cm"></i>전국 기초지자체 평균</span><span><i class="sw" style="background:#d6303e"></i>선택한 기준월</span></div>
+        <div class="chart" id="ch-stay"></div>
       </div>
     </div>
     <div class="grid more" id="more-visit" hidden>
@@ -199,7 +206,7 @@
       <div class="grid">
         <div class="card wide">
           <h3>핵심 지표 비교</h3>
-          <p class="note">기간 합계. 증감률은 비교 기간 대비 기준 기간의 변화, 외지인 비중은 %p 차이</p>
+          <p class="note">기간 합계. 증감률은 비교 기간 대비 기준 기간의 변화, 외지인 비중은 %p 차이. 체류시간은 월 자료를 외지인 방문자 수로 가중 평균</p>
           <div class="tbl-wrap">
             <table id="tbl-pairs">
               <thead><tr><th>지표</th><th class="num" id="th-a">기준</th><th class="num" id="th-b">비교</th><th class="num">증감</th><th class="num">증감률</th></tr></thead>
@@ -261,6 +268,7 @@
       <li>방문자 수는 일별 방문자를 더한 연인원입니다. 한 사람이 여러 날 방문하면 여러 번 셉니다.</li>
       <li>현지인은 강진군 거주자, 외지인은 그 외 지역 거주 방문자입니다(데이터랩 정의).</li>
       <li>방문자는 일상생활권(거주, 통근, 통학 등)을 벗어나 관광 등의 목적으로 한 장소(분석 대상 공간)에 일정시간* 이상 체류한 사람으로 정의합니다.<br><small>* 일정시간 이상이라 함은 해당 지자체 내 특정 기지국에 30분 이상 체류를 기준으로 함</small></li>
+      <li>외지인 평균 체류시간은 데이터랩 「평균 체류시간 추이(외지인)」 자료(분 단위, 월별)이며, 전국 기초지자체 평균과 함께 제공됩니다. 데이터랩이 연 단위 파일로 내려 주므로 새해 자료가 나오면 해당 연도 파일을 다시 받아 올리면 됩니다.</li>
       <li>거주지·읍면·업종·유형 분포 파일에는 기준월 열이 없어, 파일명의 연·월을 기준월로 씁니다.</li>
       <li>출처: 한국관광공사 데이터랩(datalab.visitkorea.or.kr). 원본 CSV는 저장소 <code>data/raw</code> 폴더에 있습니다.</li>
       <li>날씨: Open-Meteo 과거 기상 자료(ERA5 재분석, 강진군청 부근 좌표 기준)로, 기상청 관측값과 조금 다를 수 있습니다. 비는 하루 강수량 1mm 이상, 맑음·구름많음·흐림은 일조시간 비율로 나눴습니다.</li>

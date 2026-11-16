@@ -935,6 +935,41 @@
   const makeFestPdf = (f, ya, yb) => sheetToPdf($('#btn-fest'), () => buildFestSheet(f, ya, yb), `${f.name} ${ya}년 결과 요약`, `강진군_${f.name}_${ya}_한장요약.pdf`);
   window.__buildFestSheet = (id, ya, yb) => { const host = el('div', 'pdf-host show'); document.body.append(host); const r = buildFestSheet(FEST.find((x) => x.id === id), ya, yb); host.append(r.sheet); r.draw(); return host; }; // 점검용
 
+  // ---------- 외지인 평균 체류시간 ----------
+  const hm = (min) => (min == null ? '—' : `${Math.floor(min / 60)}시간 ${Math.round(min % 60)}분`);
+  function stayLines(box, M) {
+    box.replaceChildren();
+    const rows = D.monthly.filter((r) => r.stay_min != null);
+    if (!rows.length) return noData(box, '체류시간 자료가 없습니다');
+    const W = Math.max(300, box.clientWidth), H = 220, m = { t: 16, r: 12, b: 24, l: 44 };
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const x = d3.scalePoint(rows.map((r) => r.month), [m.l, W - m.r]);
+    const vs = rows.flatMap((r) => [r.stay_min, r.stay_nat]).filter((v) => v != null).map((v) => v / 60);
+    const y = d3.scaleLinear([Math.max(0, d3.min(vs) - 2), d3.max(vs) + 2], [H - m.b, m.t]).nice(4);
+    for (const v of y.ticks(4)) {
+      svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(v)).attr('y2', y(v)).style('stroke', 'var(--grid)');
+      svg.append('text').attr('x', m.l - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text(v + '시간');
+    }
+    const yrs = rows.filter((r) => r.month.slice(4) === '01');
+    svg.append('g').selectAll('text').data(yrs).join('text').attr('x', (r) => x(r.month)).attr('y', H - 6).attr('text-anchor', 'start').text((r) => r.month.slice(0, 4) + '년');
+    svg.append('g').selectAll('line').data(yrs).join('line').attr('x1', (r) => x(r.month)).attr('x2', (r) => x(r.month)).attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--grid)').style('stroke-dasharray', '3 3');
+    const line = (k) => d3.line().defined((r) => r[k] != null).x((r) => x(r.month)).y((r) => y(r[k] / 60));
+    svg.append('path').datum(rows).attr('d', line('stay_nat')).style('fill', 'none').style('stroke', CM).attr('stroke-width', 2.2);
+    svg.append('path').datum(rows).attr('d', line('stay_min')).style('fill', 'none').style('stroke', C0).attr('stroke-width', 2.8);
+    svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', (r) => x(r.month)).attr('cy', (r) => y(r.stay_min / 60)).attr('r', 3).style('fill', C0);
+    const sel = rows.find((r) => r.month === M);
+    if (sel) {
+      svg.append('circle').attr('cx', x(M)).attr('cy', y(sel.stay_min / 60)).attr('r', 6.5).style('fill', '#d6303e').style('stroke', 'var(--panel)').attr('stroke-width', 2);
+      const right = x(M) > W - 90;
+      svg.append('text').attr('x', x(M) + (right ? -9 : 9)).attr('y', y(sel.stay_min / 60) - 9).attr('text-anchor', right ? 'end' : 'start')
+        .style('font-weight', 800).style('fill', '#d6303e').style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', '4px').text(hm(sel.stay_min));
+    }
+    const step = x.step() || 10;
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.month) - step / 2).attr('width', step).attr('y', m.t).attr('height', H - m.t - m.b).style('fill', 'transparent')
+      .on('mousemove', (ev, r) => tip.show(ev, mLabel(r.month), [[C0, '강진군', hm(r.stay_min)], [CM, '전국 평균', hm(r.stay_nat)], [null, '전국 대비', r.stay_nat ? tri(r.stay_min - r.stay_nat) + Math.abs(Math.round((r.stay_min / r.stay_nat - 1) * 1000) / 10) + '%' : '—']].concat(r.stay_mom != null ? [[null, '전월 대비', tri(r.stay_mom) + Math.abs(r.stay_mom) + '%']] : [])))
+      .on('mouseleave', () => tip.hide());
+  }
+
   function renderOverview() {
     const M = state.month;
     const row = D.monthly.find((r) => r.month === M);
@@ -945,6 +980,15 @@
     $$('[data-d]').forEach((e) => (row ? deltaText(e, row[e.dataset.d], e.dataset.d === 'share_pp') : e.replaceChildren()));
     const noSpend = !!row && row.spend_eok == null; // 데이터랩 카드 소비 자료가 아직 공개되지 않은 달
     if (noSpend) $('[data-d="spend_mom"]').textContent = '소비 자료 공개 전';
+    {
+      const sv = $('#kpi-stay'), sd = $('#kpi-stay-d'), sn = $('#kpi-stay-n');
+      sv.replaceChildren(); sd.replaceChildren(); sn.textContent = '';
+      if (row && row.stay_min != null) {
+        sv.append(String(Math.floor(row.stay_min / 60)), el('span', 'kpi-u', '시간'), ' ' + Math.round(row.stay_min % 60), el('span', 'kpi-u', '분'));
+        deltaText(sd, row.stay_mom, false);
+        if (row.stay_nat) { const c = Math.round((row.stay_min / row.stay_nat - 1) * 1000) / 10; sn.textContent = `전국 평균 ${hm(row.stay_nat)} (${c >= 0 ? '+' : ''}${c}%)`; }
+      } else { sv.textContent = '—'; sd.textContent = `${M ? M.slice(0, 4) + '년 ' : ''}체류시간 자료 아직 없음`; }
+    }
 
     $('#kpi-note').textContent = row ? `※ 연인원: ${mLabel(M)} 한 달(${row.days}일) 동안 날마다 센 방문자를 모두 더한 수입니다. 한 사람이 3일 머물면 3명으로 세므로, 실제로 다녀간 사람 수보다 많습니다.` : '';
     const tk = $('#takeaway'); tk.replaceChildren();
@@ -957,6 +1001,7 @@
     $('.ai-badge').textContent = SUM ? 'AI 요약' : '자동 요약';
 
     const days = of('daily', M);
+    stayLines($('#ch-stay'), M);
     dailyBars($('#ch-visit-daily'), days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.local, d.outsider] })),
       [{ name: '현지인', color: CM }, { name: '외지인', color: C0 }], '명');
     if (noSpend) {
@@ -1079,7 +1124,12 @@
     let spendMissing = false;
     for (const d of days) for (const k in t) { if (d[k] == null) { if (k === 'spend_k') spendMissing = true; continue; } t[k] += d[k]; }
     const avg = (v) => (n ? Math.round(v / n) : null);
+    // 체류시간: 월 자료를 그 기간에 든 날의 외지인 수로 가중 평균 (자료 없는 달이 섞이면 표시 안 함)
+    const mrow = new Map(D.monthly.map((r) => [r.month, r]));
+    let sw = 0, sv = 0, sMiss = false;
+    for (const d of days) { const r = mrow.get(d.month); if (!r || r.stay_min == null) { sMiss = true; break; } sw += d.outsider; sv += d.outsider * r.stay_min; }
     return {
+      stay_h: n && !sMiss && sw ? Math.round(sv / sw / 6) / 10 : null,
       days, n, cal: spanDays(p.start, p.end),
       spend_eok: n && !spendMissing ? Math.round(t.spend_k / 1e4) / 10 : null, spend_avg_k: spendMissing ? null : avg(t.spend_k), spendMissing,
       outsider: n ? t.outsider : null, outsider_avg: avg(t.outsider), local: n ? t.local : null, total: n ? t.total : null,
@@ -1220,6 +1270,7 @@
     ['outsider', '외지인 방문자', '명'],
     ['local', '현지인 방문자', '명'], ['total', '전체 방문자', '명'],
     ['outsider_share_pct', '외지인 비중', '%'], ['search', '관광 검색건수', '건'],
+    ['stay_h', '외지인 평균 체류시간', '시간'],
   ];
   const dataMin = () => D.daily[0].date, dataMax = () => D.daily[D.daily.length - 1].date;
   const clampR = (r) => ({ s: r.s < dataMin() ? dataMin() : r.s, e: r.e > dataMax() ? dataMax() : r.e });
@@ -1330,7 +1381,7 @@
 
     // KPI table
     const tb = $('#tbl-pairs tbody'); tb.replaceChildren();
-    const nf = (v, unit) => (v == null ? '—' : (unit === '억원' || unit === '%' ? String(v) : fmt(v)).replace('\u2212', '-') + unit);
+    const nf = (v, unit) => (v == null ? '—' : (unit === '억원' || unit === '%' || unit === '시간' ? String(v) : fmt(v)).replace('\u2212', '-') + unit);
     for (const [k, label, unit] of METRICS) {
       const av = A[k], bv = B[k];
       const diff = av != null && bv != null ? Math.round((av - bv) * 10) / 10 : null;

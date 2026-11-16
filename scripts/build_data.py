@@ -37,6 +37,8 @@ KINDS = {
 DAILY = {"visitors_daily", "spend_daily", "search_daily"}
 UNUSED = {"spend_by_area"}  # 대시보드에서 쓰지 않는 자료(요청으로 제외)
 # 두 가지 이름을 모두 받습니다: "2026년 9월_자료명.csv" 또는 "202609_자료명.csv"
+# 평균 체류시간은 여러 달이 한 파일에 들어 있음 (예: "202501-202512_평균 체류시간 추이(외지인).csv")
+STAY_RE = re.compile(r"체류\s*시간")
 NAME_RE = re.compile(r"^(?:(\d{4})\s*년\s*(\d{1,2})\s*월|(\d{4})(\d{2}))[\s_]*(.+?)\.csv$", re.I)
 
 
@@ -65,11 +67,24 @@ def r1(x):
 def main():
     warnings, files = [], []
     found = defaultdict(dict)  # (kind) -> {month: (name, rows)}
+    stay = defaultdict(dict)  # month -> {"gj": 강진군 분, "nat": 전국 기초지자체 평균 분}
 
     for path in sorted(RAW.glob("*")):
         if not path.is_file() or path.suffix.lower() != ".csv":
             continue
         name = nfc(path.name)
+        if STAY_RE.search(name):
+            rows, n = read_rows(path), 0
+            for r in rows:
+                ym = str(r.get("기준연월") or r.get("기준년월") or "").strip()[:6]
+                reg, v = (r.get("지역명") or "").strip(), (r.get("체류시간(분)") or "").strip()
+                key = "nat" if ("평균" in reg or "전국" in reg) else "gj" if "강진" in reg else None
+                if re.fullmatch(r"\d{6}", ym) and v and key:
+                    stay[ym][key] = round(num(v)); n += 1
+            if not n:
+                warnings.append(f"{name}: 체류시간 파일인데 '기준연월, 지역명, 체류시간(분)' 열을 찾지 못해 건너뜀")
+            files.append({"name": name, "kind": "stay", "rows": len(rows), "status": "반영" if n else "건너뜀"})
+            continue
         m = NAME_RE.match(name)
         kind = None
         if m:
@@ -159,6 +174,9 @@ def main():
         row["outsider_mom"] = pct(a["outsider"], p["outsider"]) if p else None
         row["total_mom"] = pct(a["total"], p["total"]) if p else None
         row["search_mom"] = pct(a["search"], p["search"]) if p else None
+        st, pst = stay.get(m, {}), stay.get(prev_month(m), {})
+        row["stay_min"], row["stay_nat"] = st.get("gj"), st.get("nat")
+        row["stay_mom"] = pct(st["gj"], pst["gj"]) if st.get("gj") and pst.get("gj") else None
         row["share_pp"] = r1(share - r1(p["outsider"] / p["total"] * 100)) if p and p["total"] and share is not None else None
         monthly.append(row)
 
