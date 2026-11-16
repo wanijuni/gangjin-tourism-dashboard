@@ -1582,7 +1582,7 @@
     const open = b.getAttribute('aria-expanded') !== 'true';
     b.setAttribute('aria-expanded', String(open));
     b.firstChild.textContent = open ? '접기 ' : '자세히 보기 ';
-    document.getElementById(b.dataset.more).hidden = !open;
+    b.dataset.more.split(' ').forEach((id) => { const x = document.getElementById(id); if (x) x.hidden = !open; });
     if (open) render();
   }));
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });

@@ -62,7 +62,7 @@
     </section>
     <p class="kpi-note" id="kpi-note"></p>
 
-    <h2 class="sec" id="visit">방문 <small>누가, 언제, 어디로 왔나</small><button class="more-btn" data-more="more-visit" aria-expanded="false" aria-controls="more-visit">자세히 보기 <span class="chev">▾</span></button></h2>
+    <h2 class="sec" id="visit">방문 <small>누가, 언제, 어디로 왔나</small><button class="more-btn" data-more="more-visit more-trait" aria-expanded="false" aria-controls="more-visit more-trait">자세히 보기 <span class="chev">▾</span></button></h2>
     <div class="grid">
       <div class="card wide">
         <h3>일별 방문자 수</h3>
@@ -100,8 +100,9 @@
       </div>
     </div>
 
-    <h2 class="sec" id="trait">외지인 특성 <small>얼마나 머물고, 누가 왔나</small><button class="more-btn" data-more="more-trait" aria-expanded="false" aria-controls="more-trait">자세히 보기 <span class="chev">▾</span></button></h2>
-    <div class="grid more" id="more-trait" hidden>
+    <div id="more-trait" hidden><!-- 방문 '자세히 보기'를 누르면 함께 열림 -->
+    <h2 class="sec" id="trait">외지인 특성 <small>얼마나 머물고, 누가 왔나</small></h2>
+    <div class="grid">
       <div class="card wide">
         <h3>외지인 평균 체류시간 추이</h3>
         <p class="note">기준월이 속한 해와 전년(24개월), 강진군과 전국 기초지자체 평균 비교. 점에 올리면 수치가 보입니다.</p>
@@ -126,6 +127,7 @@
           </div>
         </div>
       </div>
+    </div>
     </div>
 
     <h2 class="sec" id="spend">소비 <small>어디에 얼마를 썼나</small><button class="more-btn" data-more="more-spend" aria-expanded="false" aria-controls="more-spend">자세히 보기 <span class="chev">▾</span></button></h2>
