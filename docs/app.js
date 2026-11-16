@@ -1196,6 +1196,10 @@
   }
   function trendSeries(p, a, monthly) {
     const wd = (k) => { const i = dayInfo(k); const w = '일월화수목금토'[toDate(k).getUTCDay()]; return ` (${w}${i && i.name ? ' · ' + i.name : ''})`; };
+    if (state.metric === 'stay') { // 체류시간은 월 자료뿐이라 항상 월별로
+      const mr = new Map(D.monthly.map((r) => [r.month, r]));
+      return d3.groups(a.days, (d) => d.month).map(([m, ds], idx) => { const r = mr.get(m); return { i: idx + 1, v: r && r.stay_min != null ? Math.round(r.stay_min / 6) / 10 : null, label: `${m.slice(0, 4)}.${m.slice(4)}` }; });
+    }
     if (!monthly) return a.days.map((d) => ({ i: spanDays(p.start, d.date), v: d[state.metric], label: dot(d.date) + wd(d.date) }));
     const g = d3.groups(a.days, (d) => d.month);
     return g.map(([m, ds], idx) => ({ i: idx + 1, v: ds.some((d) => d[state.metric] == null) ? null : d3.sum(ds, (d) => d[state.metric]), label: `${m.slice(0, 4)}.${m.slice(4)}` + (ds.length < lastDay(+m.slice(0, 4), +m.slice(4)) ? ` (${ds.length}일)` : '') }));
@@ -1203,6 +1207,7 @@
 
   function lines2(box, A, B, o) {
     box.replaceChildren();
+    const cf = (v) => (o.fmt ? o.fmt(v) + o.unit : compact.format(v));
     if (!A.length && !B.length) return noData(box, '두 기간 모두 자료가 없습니다');
     const n = Math.max(2, d3.max([...A, ...B], (d) => d.i));
     const daily = !o.monthly && o.startA && o.startB;
@@ -1220,7 +1225,7 @@
     const lo = d3.min(vs) || 0, hi = d3.max(vs) || 1, pad = Math.max((hi - lo) * 0.25, hi * 0.03);
     const y0 = d3.scaleLinear([Math.max(0, lo - pad), hi + pad * 0.6], [0, 1]).nice(5);
     const ticks = y0.ticks(4);
-    const m = { t: o.monthly ? 26 : 12, r: 14, b: daily ? 60 + (RH - 17) * 2 : 22, l: Math.max(textW(svg, ticks.map((v) => compact.format(v))), daily ? textW(svg, ['기준', '비교']) + 8 : 0) + 10 };
+    const m = { t: o.monthly ? 26 : 12, r: 14, b: daily ? 60 + (RH - 17) * 2 : 22, l: Math.max(textW(svg, ticks.map((v) => cf(v))), daily ? textW(svg, ['기준', '비교']) + 8 : 0) + 10 };
     const x = d3.scaleLinear([1, n], [m.l, W - m.r]);
     const y = d3.scaleLinear(y0.domain(), [H - m.b, m.t]);
     if (daily) {
@@ -1245,7 +1250,7 @@
     }
     svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', m.l).attr('x2', W - m.r)
       .attr('y1', y).attr('y2', y).style('stroke', (v) => (v === 0 ? 'var(--axis)' : 'var(--grid)'));
-    svg.append('g').selectAll('text').data(ticks).join('text').attr('x', m.l - 8).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => compact.format(v));
+    svg.append('g').selectAll('text').data(ticks).join('text').attr('x', m.l - 8).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => cf(v));
     const tickLab = (i) => o.tick(i);
     const maxT = Math.max(2, Math.floor((W - m.l - m.r) / 64));
     const step = Math.max(1, Math.ceil((n - 1) / (maxT - 1)));
@@ -1267,7 +1272,7 @@
           svg.append('g').selectAll('text').data(pts).join('text').attr('class', 'val-l')
             .attr('x', (d) => x(d.i)).attr('text-anchor', (d) => (d.i === 1 ? 'start' : d.i === n ? 'end' : 'middle'))
             .attr('y', (d) => { const ov = other.get(d.i); const up = ov == null ? isA : (isA ? d.v >= ov : d.v > ov); return y(d.v) + (up ? -12 : 22); })
-            .style('fill', c).text((d) => compact.format(d.v));
+            .style('fill', c).text((d) => (o.fmt ? o.fmt(d.v) : compact.format(d.v)));
         }
       }
     });
@@ -1283,8 +1288,8 @@
         dA.attr('cx', x(i)).attr('cy', a ? y(a.v) : 0).attr('visibility', a ? 'visible' : 'hidden');
         dB.attr('cx', x(i)).attr('cy', b ? y(b.v) : 0).attr('visibility', b ? 'visible' : 'hidden');
         tip.show(ev, o.monthly ? `${i}번째 달` : `${i}일째`, [
-          [C0, a ? a.label : o.la, a ? fmt(a.v) + o.unit : '자료 없음'],
-          ['#7d848e', b ? b.label : o.lb, b ? fmt(b.v) + o.unit : '자료 없음']]
+          [C0, a ? a.label : o.la, a && a.v != null ? (o.fmt ? o.fmt(a.v) : fmt(a.v)) + o.unit : '자료 없음'],
+          ['#7d848e', b ? b.label : o.lb, b && b.v != null ? (o.fmt ? o.fmt(b.v) : fmt(b.v)) + o.unit : '자료 없음']]
           .concat(daily && WX ? [[C0, '기준 날씨', wxText(keyA(i))], ['#7d848e', '비교 날씨', wxText(keyB(i))]] : []));
       })
       .on('mouseleave', () => { rule.attr('visibility', 'hidden'); dA.attr('visibility', 'hidden'); dB.attr('visibility', 'hidden'); tip.hide(); });
@@ -1442,18 +1447,23 @@
     }
 
     // trend
-    const monthly = Math.max(A.cal, B.cal) > 62;
+    const monthly = Math.max(A.cal, B.cal) > 62 || state.metric === 'stay';
     $('#trend-title').textContent = monthly ? '월별 추이 겹쳐보기' : '일별 추이 겹쳐보기';
     $('#trend-note').textContent = monthly
       ? '각 기간의 1번째 달, 2번째 달…끼리 겹쳐 비교합니다. 일부만 포함된 달은 괄호에 일수를 표시합니다.'
       : '각 기간의 1일째, 2일째…끼리 겹쳐 비교합니다. 요일이 달라질 수 있어 주말 효과에 유의하세요.';
     const sa = trendSeries(PA, A, monthly), sb = trendSeries(PBx, B, monthly);
-    const unitTxt = { outsider: '명', total: '명', spend_k: '천원', search: '건' }[state.metric];
+    const unitTxt = { outsider: '명', total: '명', spend_k: '천원', search: '건', stay: '시간' }[state.metric];
     const aLab = new Map(sa.map((d) => [d.i, d.label]));
     const tick = monthly
       ? (i) => { const l = aLab.get(i); return l ? `${+l.slice(5, 7)}월` : `${i}번째`; }
       : (i) => { const s = addDays(PA.start, i - 1); return `${+s.slice(4, 6)}/${+s.slice(6, 8)}`; };
-    lines2($('#ch-cmp-daily'), sa, sb, { la, lb, unit: unitTxt, monthly, tick, startA: PA.start, startB: PBx.start });
+    lines2($('#ch-cmp-daily'), sa, sb, { la, lb, unit: unitTxt, monthly, tick, startA: PA.start, startB: PBx.start, fmt: state.metric === 'stay' ? (v) => (Math.round(v * 10) / 10) + '' : null });
+    if (state.metric === 'stay' && Math.max(sa.length, sb.length) < 2) {
+      const v = (x) => (x[0] && x[0].v != null ? x[0].v + '시간' : '자료 없음');
+      $('#ch-cmp-daily').replaceChildren(el('p', 'empty-note', `체류시간은 월 자료라 한 달 안의 기간은 선 그래프로 그릴 수 없습니다. ${la} ${v(sa)} · ${lb} ${v(sb)} (위 핵심 지표 표에서도 볼 수 있습니다)`));
+    }
+    if (state.metric === 'stay') $('#trend-note').textContent = '외지인 평균 체류시간(월 자료, 시간). 각 기간의 1번째 달, 2번째 달…끼리 겹쳐 비교합니다. 자료가 없는 달은 비워 둡니다.';
 
     // distributions
     const pairMaps = (ma, mb, scale) => [...new Set([...ma.keys(), ...mb.keys()])]
