@@ -939,23 +939,21 @@
   const hm = (min) => (min == null ? '—' : `${Math.floor(min / 60)}시간 ${Math.round(min % 60)}분`);
   function stayLines(box, M) {
     box.replaceChildren();
-    // 기준월이 속한 해와 그 전년만 (24개월)
-    const Y = +M.slice(0, 4);
-    const rows = D.monthly.filter((r) => r.stay_min != null && (+r.month.slice(0, 4) === Y || +r.month.slice(0, 4) === Y - 1));
-    if (!rows.length) return noData(box, `${Y - 1}~${Y}년 체류시간 자료가 없습니다`);
+    // 기준월이 속한 해만 (1~12월)
+    const Y = M.slice(0, 4);
+    const rows = D.monthly.filter((r) => r.stay_min != null && r.month.slice(0, 4) === Y);
+    if (!rows.length) return noData(box, `${Y}년 체류시간 자료가 없습니다`);
     const W = Math.max(300, box.clientWidth), H = 300, m = { t: 16, r: 12, b: 24, l: 44 };
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
-    const x = d3.scalePoint(rows.map((r) => r.month), [m.l, W - m.r]);
+    const months = d3.range(1, 13).map((i) => Y + String(i).padStart(2, '0'));
+    const x = d3.scalePoint(months, [m.l + 8, W - m.r - 8]);
     const vs = rows.flatMap((r) => [r.stay_min, r.stay_nat]).filter((v) => v != null).map((v) => v / 60);
     const y = d3.scaleLinear([Math.max(0, d3.min(vs) - 2), d3.max(vs) + 2], [H - m.b, m.t]).nice(4);
     for (const v of y.ticks(4)) {
       svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(v)).attr('y2', y(v)).style('stroke', 'var(--grid)');
       svg.append('text').attr('x', m.l - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text(v + '시간');
     }
-    const yrs = rows.filter((r) => r.month.slice(4) === '01');
-    svg.append('g').selectAll('text').data(rows.filter((r) => ['04', '07', '10'].includes(r.month.slice(4)))).join('text').attr('x', (r) => x(r.month)).attr('y', H - 6).attr('text-anchor', 'middle').style('fill', 'var(--muted)').text((r) => +r.month.slice(4) + '월');
-    svg.append('g').selectAll('text').data(yrs).join('text').attr('x', (r) => x(r.month)).attr('y', H - 6).attr('text-anchor', 'start').text((r) => r.month.slice(0, 4) + '년');
-    svg.append('g').selectAll('line').data(yrs).join('line').attr('x1', (r) => x(r.month)).attr('x2', (r) => x(r.month)).attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--grid)').style('stroke-dasharray', '3 3');
+    svg.append('g').selectAll('text').data(months).join('text').attr('x', (k) => x(k)).attr('y', H - 6).attr('text-anchor', 'middle').style('fill', 'var(--muted)').text((k) => +k.slice(4) + '월');
     const line = (k) => d3.line().defined((r) => r[k] != null).x((r) => x(r.month)).y((r) => y(r[k] / 60));
     svg.append('path').datum(rows).attr('d', line('stay_nat')).style('fill', 'none').style('stroke', CM).attr('stroke-width', 2.2);
     svg.append('path').datum(rows).attr('d', line('stay_min')).style('fill', 'none').style('stroke', C0).attr('stroke-width', 2.8);
@@ -963,7 +961,7 @@
     const sel = rows.find((r) => r.month === M);
     if (sel) {
       svg.append('circle').attr('cx', x(M)).attr('cy', y(sel.stay_min / 60)).attr('r', 6.5).style('fill', '#d6303e').style('stroke', 'var(--panel)').attr('stroke-width', 2);
-      const right = x(M) > W - 90;
+      const right = x(M) > W - 85;
       const pi = rows.indexOf(sel), nb = [rows[pi - 1], rows[pi + 1]].filter(Boolean).map((r) => r.stay_min); const below = nb.some((v) => v > sel.stay_min); // 이웃 점이 더 높으면 선과 겹치지 않게 아래에
       svg.append('text').attr('x', x(M) + (right ? -9 : 9)).attr('y', y(sel.stay_min / 60) + (below ? 22 : -16)).attr('text-anchor', right ? 'end' : 'start')
         .style('font-weight', 800).style('fill', '#d6303e').style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', '4px').text(hm(sel.stay_min));
