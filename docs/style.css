@@ -353,3 +353,6 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .explain .ex-row.muted { color: var(--muted); font-size: 12px; }
 .age-split { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
 @media (max-width: 760px) { .age-split { grid-template-columns: 1fr; } }
+/* 체류시간·연령대: 가로로 한 칸씩 두 개 */
+.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .grid.two { grid-template-columns: 1fr; } }
