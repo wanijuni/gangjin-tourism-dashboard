@@ -970,6 +970,51 @@
       .on('mouseleave', () => tip.hide());
   }
 
+  // ---------- 외지인 성·연령 구성비 ----------
+  const demoRow = (m) => (D.demo && D.demo.rows[m]) || null;
+  // 기간 P의 연령 구성: 달마다 그 기간에 든 날의 외지인 수로 가중 평균(자료 있는 달만)
+  function ageOf(P) {
+    if (!D.demo) return null;
+    const w = new Map();
+    for (const d of D.daily) if (d.date >= P.start && d.date <= P.end) w.set(d.month, (w.get(d.month) || 0) + d.outsider);
+    let tot = 0; const acc = D.demo.ages.map(() => 0); const used = [], miss = [];
+    for (const [m, wt] of w) { const r = demoRow(m); if (!r || !r.all) { miss.push(m); continue; } used.push(m); tot += wt; r.all.forEach((v, i) => (acc[i] += (v || 0) * wt)); }
+    return tot ? { ages: acc.map((v) => Math.round((v / tot) * 10) / 10), used, miss } : { ages: null, used, miss };
+  }
+  function renderDemo(M) {
+    const box = $('#ch-age'), box2 = $('#ch-age-eup'), ex = $('#ex-age'), ex2 = $('#ex-sex');
+    const r = demoRow(M), A = D.demo ? D.demo.ages : [];
+    ex.replaceChildren(); ex2.replaceChildren();
+    if (!r || !r.all) {
+      const first = D.demo && Object.keys(D.demo.rows).sort()[0];
+      $('#lg-age-a').textContent = mLabel(M); $('#lg-age-b-wrap').hidden = true;
+      for (const b of [box, box2]) b.replaceChildren(el('p', 'empty-note', `${mLabel(M)} 성·연령 자료가 없습니다.` + (first ? ` (${mLabel(first)}부터 있음)` : '')));
+      return;
+    }
+    const y = String(+M.slice(0, 4) - 1) + M.slice(4), pr = demoRow(y) && demoRow(y).all ? y : demoRow(prevM(M)) && demoRow(prevM(M)).all ? prevM(M) : null;
+    const pa = pr ? demoRow(pr).all : null;
+    hbars2(box, A.map((g, i) => ({ label: g, a: r.all[i], b: pa ? pa[i] : null })), { la: mLabel(M), lb: pr ? mLabel(pr) : '', fmt: (v) => v + '%' });
+    $('#lg-age-a').textContent = mLabel(M); $('#lg-age-b').textContent = pr ? mLabel(pr) + (pr.slice(4) === M.slice(4) ? ' (전년 같은 달)' : ' (전월)') : ''; $('#lg-age-b-wrap').hidden = !pr;
+    const top = A.map((g, i) => [g, r.all[i]]).sort((p, q) => q[1] - p[1]);
+    const mid = (r.all[4] || 0) + (r.all[5] || 0) + (r.all[6] || 0);
+    const li = (txt) => ex.append(el('div', 'ex-row', txt));
+    li(`가장 많은 연령대는 ${top[0][0]}(${top[0][1]}%)와 ${top[1][0]}(${top[1][1]}%)이며, 40~60대가 ${Math.round(mid * 10) / 10}%를 차지합니다.`);
+    if (pa) {
+      const ch = A.map((g, i) => [g, Math.round((r.all[i] - pa[i]) * 10) / 10]).sort((p, q) => q[1] - p[1]);
+      const up = ch[0], dn = ch[ch.length - 1];
+      const t = el('div', 'ex-row'); t.append(`${mLabel(pr)}보다 `);
+      if (up[1] > 0) t.append(`${up[0]} `, el('span', 'up', `▲${up[1]}%p`));
+      if (up[1] > 0 && dn[1] < 0) t.append(', ');
+      if (dn[1] < 0) t.append(`${dn[0]} `, el('span', 'down', `▼${Math.abs(dn[1])}%p`));
+      if (up[1] <= 0 && dn[1] >= 0) t.append('구성이 거의 같습니다');
+      ex.append(t);
+    }
+    hbars2(box2, A.map((g, i) => ({ label: g, a: r.eup[i], b: r.myeon[i] })), { la: '강진읍', lb: '면 지역', fmt: (v) => v + '%' });
+    const y2030 = (a) => Math.round(((a[2] || 0) + (a[3] || 0)) * 10) / 10;
+    ex2.append(el('div', 'ex-row', `20~30대 비율: 강진읍 ${y2030(r.eup)}% · 면 지역 ${y2030(r.myeon)}%`));
+    if (r.male != null) ex2.append(el('div', 'ex-row', `성별: 남성 ${r.male}% · 여성 ${Math.round((100 - r.male) * 10) / 10}%`), el('div', 'ex-row muted', '* 휴대폰 명의 기준이라 남성 비율이 실제보다 높게 나올 수 있습니다.'));
+  }
+
   function renderOverview() {
     const M = state.month;
     const row = D.monthly.find((r) => r.month === M);
@@ -993,6 +1038,7 @@
 
     const days = of('daily', M);
     stayLines($('#ch-stay'), M);
+    renderDemo(M);
     dailyBars($('#ch-visit-daily'), days.map((d) => ({ key: d.date, label: dayLabel(d.date), full: dayFull(d.date), vals: [d.local, d.outsider] })),
       [{ name: '현지인', color: CM }, { name: '외지인', color: C0 }], '명');
     if (noSpend) {
@@ -1441,6 +1487,12 @@
       explainTop2($('#ex-cmp-cat'), catPairs, EX_SPEND, '백만원', la, lb);
     }
     hbars2($('#ch-cmp-sido'), pairMaps(sidoWeighted(A), sidoWeighted(B), (v) => v), { la, lb, fmt: (v) => v + '%' });
+    {
+      const ga = ageOf(PA), gb = ageOf(PBx), box = $('#ch-cmp-age');
+      if (!ga || !ga.ages || !gb || !gb.ages) box.replaceChildren(el('p', 'empty-note', '두 기간 중 성·연령 자료가 없는 기간이 있습니다. (2025년 1월부터 있음)'));
+      else hbars2(box, D.demo.ages.map((g, i) => ({ label: g, a: ga.ages[i], b: gb.ages[i] })), { la, lb, fmt: (v) => v + '%' });
+      $('#cmp-age-note').textContent = '구성비(%). 여러 달이면 달마다 외지인 방문자 수로 가중 평균' + ((ga && ga.miss.length) || (gb && gb.miss.length) ? ' · 자료 없는 달은 빼고 계산' : '') + (state.unit === 'festival' || state.unit === 'custom' ? ' · 월 자료라 축제·특정기간도 그 달 전체 값 기준' : '');
+    }
     const typePairs = pairMaps(sumCols(D.daily_type, PA), sumCols(D.daily_type, PBx), (v) => v);
     hbars2($('#ch-cmp-type'), typePairs, { la, lb, fmt: (v) => fmt(v), defs: SRCH });
     explainTop2($('#ex-cmp-type'), typePairs, EX_SEARCH, '건', la, lb);

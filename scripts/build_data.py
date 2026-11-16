@@ -33,7 +33,10 @@ KINDS = {
     "업종별 지출액": "industry",
     "지역별 검색건수": "search_area",
     "유형별 검색건수": "search_type",
+    "성별 방문자 구성비": "sex",
+    "연령별 방문자 구성비": "age",
 }
+AGES = ["10대 미만", "10대", "20대", "30대", "40대", "50대", "60대", "70대"]
 DAILY = {"visitors_daily", "spend_daily", "search_daily"}
 UNUSED = {"spend_by_area"}  # 대시보드에서 쓰지 않는 자료(요청으로 제외)
 # 두 가지 이름을 모두 받습니다: "2026년 9월_자료명.csv" 또는 "202609_자료명.csv"
@@ -216,6 +219,40 @@ def main():
                     "n": int(num(r["중분류 검색건수"])), "pct": num(r["중분류 검색건수 비율"])}
                    for m, rows in get("search_area").items() for r in rows]
 
+    # ---- 외지인 성·연령 구성비 (읍면별 파일 → 그 달 읍면 방문자 수로 가중 평균해 강진군 전체 값) ----
+    wts = defaultdict(dict)
+    for v in visitors_by_area:
+        wts[v["month"]][v["area"]] = v["visitors"]
+
+    def wavg(pairs):  # [(area, value)] → 가중 평균 (방문자 수 없으면 단순 평균)
+        pairs = [(a, x) for a, x in pairs if x is not None]
+        if not pairs:
+            return None
+        w = [wts_m.get(a, 0) or 0 for a, _ in pairs]
+        if sum(w) == 0:
+            w = [1] * len(pairs)
+        return r1(sum(wi * x for wi, (_, x) in zip(w, pairs)) / sum(w))
+
+    demo = {}
+    for m in sorted(set(get("age")) | set(get("sex"))):
+        wts_m = wts.get(m, {})
+        d = {}
+        rows = get("age").get(m, [])
+        if rows:
+            by = defaultdict(dict)
+            for r in rows:
+                by[r["읍면동"].strip()][r["연령"].strip()] = num(r["비율"])
+            areas = list(by)
+            def ages(sel):
+                return [wavg([(a, by[a].get(g)) for a in sel]) for g in AGES]
+            d["all"] = ages(areas)
+            d["eup"] = ages([a for a in areas if a.endswith("읍")])
+            d["myeon"] = ages([a for a in areas if not a.endswith("읍")])
+        rows = get("sex").get(m, [])
+        if rows:
+            d["male"] = wavg([(r["읍면동"].strip(), num(r["비율"])) for r in rows if r["성별"].strip() == "남성"])
+        demo[m] = d
+
     # ---- 일별 업종·검색유형 (기간 비교에서 아무 기간이나 합산하기 위해) ----
     # 크기를 줄이려고 열 목록 + 날짜별 값 배열로 저장
     def columnar(kind, label_col, value_col, skip):
@@ -249,6 +286,7 @@ def main():
         "spend_cat": spend_cat,
         "search_type": search_type,
         "search_area": search_area,
+        "demo": {"ages": AGES, "rows": demo},
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

@@ -79,6 +79,24 @@
         <div class="chart" id="ch-stay"></div>
       </div>
       <div class="card wide">
+        <h3>외지인 방문자 연령대</h3>
+        <p class="note" id="age-note">구성비(%), 읍면별 자료를 그 달 읍면 방문자 수로 가중 평균한 강진군 전체 값</p>
+        <div class="age-split">
+          <div>
+            <div class="map-cap">강진군 전체</div>
+            <div class="legend"><span><i class="sw c0"></i><span id="lg-age-a">기준월</span></span><span id="lg-age-b-wrap"><i class="sw cm"></i><span id="lg-age-b">비교</span></span></div>
+            <div class="chart" id="ch-age"></div>
+            <div class="explain" id="ex-age"></div>
+          </div>
+          <div>
+            <div class="map-cap">강진읍 vs 면 지역 (나머지 10개 면)</div>
+            <div class="legend"><span><i class="sw c0"></i>강진읍</span><span><i class="sw cm"></i>면 지역</span></div>
+            <div class="chart" id="ch-age-eup"></div>
+            <div class="explain" id="ex-sex"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card wide">
         <h3>읍면별 방문자 수</h3>
         <p class="note" id="ov-map-note"></p>
         <div class="map-split">
@@ -248,6 +266,11 @@
           <div class="chart" id="ch-cmp-sido"></div>
         </div>
         <div class="card">
+          <h3>외지인 연령대 비교</h3>
+          <p class="note" id="cmp-age-note">구성비(%). 여러 달이면 달마다 외지인 방문자 수로 가중 평균</p>
+          <div class="chart" id="ch-cmp-age"></div>
+        </div>
+        <div class="card">
           <h3>검색 유형 비교</h3>
           <p class="note">기간 합계, 건</p>
           <div class="chart" id="ch-cmp-type"></div>
@@ -267,6 +290,7 @@
       <li>방문자 수는 일별 방문자를 더한 연인원입니다. 한 사람이 여러 날 방문하면 여러 번 셉니다.</li>
       <li>현지인은 강진군 거주자, 외지인은 그 외 지역 거주 방문자입니다(데이터랩 정의).</li>
       <li>방문자는 일상생활권(거주, 통근, 통학 등)을 벗어나 관광 등의 목적으로 한 장소(분석 대상 공간)에 일정시간* 이상 체류한 사람으로 정의합니다.<br><small>* 일정시간 이상이라 함은 해당 지자체 내 특정 기지국에 30분 이상 체류를 기준으로 함</small></li>
+      <li>외지인 성·연령 구성비는 데이터랩 「성/연령별 방문 현황」(내국인 외지인, 성·연령 파악이 가능한 자료만 포함) 읍면별 월 자료를 그 달 읍면 방문자 수로 가중 평균한 값입니다. 성별은 휴대폰 명의 기준이라 남성 비율이 높게 나올 수 있습니다.</li>
       <li>외지인 평균 체류시간은 데이터랩 「평균 체류시간 추이(외지인)」 자료(분 단위, 월별)이며, 전국 기초지자체 평균과 함께 제공됩니다. 데이터랩이 연 단위 파일로 내려 주므로 새해 자료가 나오면 해당 연도 파일을 다시 받아 올리면 됩니다.</li>
       <li>거주지·읍면·업종·유형 분포 파일에는 기준월 열이 없어, 파일명의 연·월을 기준월로 씁니다.</li>
       <li>출처: 한국관광공사 데이터랩(datalab.visitkorea.or.kr). 원본 CSV는 저장소 <code>data/raw</code> 폴더에 있습니다.</li>
