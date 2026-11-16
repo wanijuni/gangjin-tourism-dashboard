@@ -307,3 +307,29 @@ body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 .pdf-sheet .ps-sub { font-weight: 700; color: var(--fg); margin: 2px 0 0; }
 .pdf-sheet .ps-box.wide { min-width: 0; }
 .ctrls { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* ---------- 휴대폰 화면 ---------- */
+.ctrl.off { visibility: hidden; }
+.pc-mob { display: none; }
+#tbl-pairs td .pc-desk { color: var(--fg); font-weight: 400; }
+@media (max-width: 640px) {
+  .head { align-items: flex-start; }
+  .ctrls { justify-content: flex-start; gap: 8px 14px; width: 100%; }
+  .ctrl.off { display: none; }                      /* 기간 비교 탭에서 빈 자리 없애기 */
+  .kpis { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi { padding: 12px; }
+  .kpi-v { font-size: 22px; }
+  .map-side th { position: static; }                /* 표 머리가 화면에 붙어 따라다니지 않게 */
+  .map-side table, .map-side th { font-size: 12.5px; }
+  .map-side td, .map-side th { padding: 6px 4px; white-space: nowrap; }
+  #tbl-pairs { min-width: 0; }
+  #tbl-pairs th, #tbl-pairs td { padding: 8px 5px; font-size: 13px; }
+  #tbl-pairs td.metric { font-size: 13.5px; }
+  #tbl-pairs th:nth-child(4), #tbl-pairs td:nth-child(4) { display: none; }
+  .pc-desk { display: none; } .pc-mob { display: inline; } /* 증감(절대값)은 빼고 증감률만 */
+  .fest-row { flex-wrap: wrap; }
+  .fest-row select { min-width: 0; flex: 1 1 55%; }
+  .fest-info { flex-basis: 100%; }
+  #tbl-pairs th { white-space: normal; line-height: 1.25; }
+  .card { padding: 14px; }
+}

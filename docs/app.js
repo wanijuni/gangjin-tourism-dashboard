@@ -1343,6 +1343,10 @@
       const cls = diff > 0 ? 'num up' : diff < 0 ? 'num down' : 'num';
       tr.append(el('td', cls, diff == null ? '—' : sign(diff) + (unit === '%' ? Math.abs(diff) + '%p' : nf(Math.abs(diff), unit))));
       tr.append(el('td', pct == null ? 'num' : pct > 0 ? 'num up' : pct < 0 ? 'num down' : 'num', pct == null ? '—' : sign(pct) + Math.abs(pct) + '%'));
+      if (unit === '%' && diff != null) { // 휴대폰에선 증감 칸이 숨으므로 %p 차이를 증감률 칸에 보여 줌
+        const td = tr.lastChild; td.className = diff > 0 ? 'num up' : diff < 0 ? 'num down' : 'num';
+        td.replaceChildren(el('span', 'pc-desk', '—'), el('span', 'pc-mob', sign(diff) + Math.abs(diff) + '%p'));
+      }
       tb.append(tr);
     }
 
@@ -1414,8 +1418,8 @@
     if (!D) return;
     $('#overview').hidden = state.tab !== 'overview';
     $('#compare').hidden = state.tab !== 'compare';
-    $('#ov-ctrl').style.visibility = state.tab === 'overview' ? 'visible' : 'hidden';
-    $('#yr-ctrl').style.visibility = state.tab === 'overview' ? 'visible' : 'hidden';
+    $('#ov-ctrl').classList.toggle('off', state.tab !== 'overview');
+    $('#yr-ctrl').classList.toggle('off', state.tab !== 'overview');
     $$('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === state.tab)));
     if (state.tab === 'overview') renderOverview(); else renderCompare();
   }
