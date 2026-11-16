@@ -980,15 +980,6 @@
     $$('[data-d]').forEach((e) => (row ? deltaText(e, row[e.dataset.d], e.dataset.d === 'share_pp') : e.replaceChildren()));
     const noSpend = !!row && row.spend_eok == null; // 데이터랩 카드 소비 자료가 아직 공개되지 않은 달
     if (noSpend) $('[data-d="spend_mom"]').textContent = '소비 자료 공개 전';
-    {
-      const sv = $('#kpi-stay'), sd = $('#kpi-stay-d'), sn = $('#kpi-stay-n');
-      sv.replaceChildren(); sd.replaceChildren(); sn.textContent = '';
-      if (row && row.stay_min != null) {
-        sv.append(String(Math.floor(row.stay_min / 60)), el('span', 'kpi-u', '시간'), ' ' + Math.round(row.stay_min % 60), el('span', 'kpi-u', '분'));
-        deltaText(sd, row.stay_mom, false);
-        if (row.stay_nat) { const c = Math.round((row.stay_min / row.stay_nat - 1) * 1000) / 10; sn.textContent = `전국 평균 ${hm(row.stay_nat)} (${c >= 0 ? '+' : ''}${c}%)`; }
-      } else { sv.textContent = '—'; sd.textContent = `${M ? M.slice(0, 4) + '년 ' : ''}체류시간 자료 아직 없음`; }
-    }
 
     $('#kpi-note').textContent = row ? `※ 연인원: ${mLabel(M)} 한 달(${row.days}일) 동안 날마다 센 방문자를 모두 더한 수입니다. 한 사람이 3일 머물면 3명으로 세므로, 실제로 다녀간 사람 수보다 많습니다.` : '';
     const tk = $('#takeaway'); tk.replaceChildren();
