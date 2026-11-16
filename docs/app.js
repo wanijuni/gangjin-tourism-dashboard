@@ -1407,6 +1407,23 @@
   // ---------- footer ----------
   function renderFooter() {
     $('.gen').textContent = `· 데이터 갱신 ${D.generated.replace('T', ' ').slice(0, 16)}`;
+    // 최신 자료 배지: 가장 최근 달과 소비 자료 반영 여부. 이 브라우저에서 처음 보는 달이면 NEW 표시
+    const last = D.monthly[D.monthly.length - 1];
+    if (last) {
+      const upd = $('#upd'), mm = mLabel(last.month), spendIn = last.spend_eok != null;
+      const key = last.month + (spendIn ? 's' : '');
+      let seen = null; try { seen = localStorage.getItem('gj-seen-month'); } catch (e) { /* 저장 불가 환경 */ }
+      upd.replaceChildren();
+      if (seen !== key) upd.append(el('span', 'upd-new', 'NEW'));
+      upd.append(el('span', 'upd-t', spendIn ? `${mm} 자료 반영됨` : `${mm} 방문·검색 자료 반영됨`));
+      if (!spendIn) {
+        const ls = D.monthly.filter((r) => r.spend_eok != null).pop();
+        upd.append(el('span', 'upd-s', `관광소비는 ${ls ? mLabel(ls.month) + '까지' : '공개 전'}`));
+      }
+      upd.title = '데이터랩에서 받은 가장 최근 달입니다. NEW는 이 기기에서 처음 보는 자료일 때 붙습니다.';
+      upd.hidden = false;
+      try { localStorage.setItem('gj-seen-month', key); } catch (e) { /* 무시 */ }
+    }
     const wl = $('#warn-list'); wl.replaceChildren(...D.warnings.map((w) => el('li', null, w)));
     $('#checks').hidden = !D.warnings.length;
     const tb = $('#tbl-files tbody');
